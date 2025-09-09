@@ -1,34 +1,35 @@
 /**
- * @file Tooltips.js
- * @description 负责全局工具提示的显示和管理(不含提示文本，那个在SettingsPanel.js中)
+ * =================================================================================
+ * 斗鱼弹幕助手 - 工具提示组件
+ * ---------------------------------------------------------------------------------
+ * 负责全局工具提示的显示和管理
+ * =================================================================================
  */
 
-// 模块级变量，用于存储全局唯一的 tooltip 元素引用。
+// 模块级变量，用于存储全局唯一的 tooltip 元素引用
 let tooltipElement = null;
 
 /**
- * 确保全局 tooltip 的 DOM 元素存在于页面上。
+ * 确保全局 tooltip 的 DOM 元素存在于页面上
  * @private
  */
 function _ensureTooltipElement() {
-    // 检查模块级变量，而不是每次都查询 DOM
     if (!tooltipElement) {
         tooltipElement = document.createElement('div');
-        tooltipElement.id = 'qmx-global-tooltip'; // ID 必须与 CSS 中的选择器匹配
+        tooltipElement.id = 'dda-global-tooltip';
+        tooltipElement.className = 'dda-tooltip';
         document.body.appendChild(tooltipElement);
     }
 }
 
 /**
- * 激活指定父元素内的工具提示功能。
- *
- * @param {HTMLElement} parentElement - 需要监听 tooltip 触发器的容器元素。
- * @param {Object<string, string>} tooltipData - 一个键值对对象，key 对应 `data-tooltip-key` 的值，value 是要显示的文本。
+ * 激活指定父元素内的工具提示功能
+ * @param {HTMLElement} parentElement - 需要监听 tooltip 触发器的容器元素
+ * @param {Object<string, string>} tooltipData - 键值对对象，key对应data-tooltip-key的值，value是要显示的文本
  */
 export function activateToolTips(parentElement, tooltipData) {
-    // 参数校验，确保调用正确
     if (!parentElement || typeof tooltipData !== 'object') {
-        console.warn('[Tooltip] 调用失败：必须提供 parentElement 和 tooltipData。');
+        console.warn('[ToolTip] 调用失败：必须提供 parentElement 和 tooltipData');
         return;
     }
 
@@ -36,8 +37,7 @@ export function activateToolTips(parentElement, tooltipData) {
 
     // 在父元素上绑定 mouseover 事件委托
     parentElement.addEventListener('mouseover', (e) => {
-        const trigger = e.target.closest('.qmx-tooltip-icon');
-        // 如果鼠标没有悬停在指定的触发器上，则不做任何事
+        const trigger = e.target.closest('.dda-tooltip-trigger');
         if (!trigger) return;
 
         const key = trigger.dataset.tooltipKey;
@@ -45,32 +45,57 @@ export function activateToolTips(parentElement, tooltipData) {
 
         // 如果找到了对应的文本内容
         if (text) {
-            tooltipElement.textContent = text;
-
-            // --- 定位逻辑 ---
-            const triggerRect = trigger.getBoundingClientRect();
-
-            // 计算定位，使其在触发器正上方居中
-            const left = triggerRect.left + triggerRect.width / 2;
-            const top = triggerRect.top;
-
-            tooltipElement.style.left = `${left}px`;
-            tooltipElement.style.top = `${top}px`;
-            // 使用 transform 将其向上移动自身高度外加 8px 间距，并水平居中
-            tooltipElement.style.transform = `translate(-50%, calc(-100% - 8px))`;
-
-            // 添加 .visible 类来触发 CSS 中的显示动画
-            tooltipElement.classList.add('visible');
+            showTooltip(text, trigger);
         }
     });
 
     // 在父元素上绑定 mouseout 事件委托
     parentElement.addEventListener('mouseout', (e) => {
-        const trigger = e.target.closest('.qmx-tooltip-icon');
-        // 如果鼠标移出了触发器
+        const trigger = e.target.closest('.dda-tooltip-trigger');
         if (trigger) {
-            // 移除 .visible 类来触发 CSS 中的隐藏动画
-            tooltipElement.classList.remove('visible');
+            hideTooltip();
         }
     });
+}
+
+/**
+ * 显示工具提示
+ * @param {string} text - 提示文本
+ * @param {HTMLElement} trigger - 触发元素
+ */
+export function showTooltip(text, trigger) {
+    _ensureTooltipElement();
+    
+    tooltipElement.textContent = text;
+
+    // 计算定位
+    const triggerRect = trigger.getBoundingClientRect();
+    const left = triggerRect.left + triggerRect.width / 2;
+    const top = triggerRect.top;
+
+    tooltipElement.style.left = `${left}px`;
+    tooltipElement.style.top = `${top}px`;
+    tooltipElement.style.transform = `translate(-50%, calc(-100% - 8px))`;
+
+    // 显示提示
+    tooltipElement.classList.add('dda-tooltip-visible');
+}
+
+/**
+ * 隐藏工具提示
+ */
+export function hideTooltip() {
+    if (tooltipElement) {
+        tooltipElement.classList.remove('dda-tooltip-visible');
+    }
+}
+
+/**
+ * 移除工具提示元素
+ */
+export function destroyTooltips() {
+    if (tooltipElement && tooltipElement.parentNode) {
+        tooltipElement.parentNode.removeChild(tooltipElement);
+        tooltipElement = null;
+    }
 }

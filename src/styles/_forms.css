@@ -1,25 +1,28 @@
-/* 表单组件样式 */
+/* 表单组件样式 (Material 3 Expressive) */
 
-/* --- 基础输入框样式 --- */
+/* --- 基础输入框样式 (Outlined) --- */
 .qmx-input {
     background-color: var(--md-sys-color-surface-container);
     border: 1px solid var(--md-sys-color-outline);
     color: var(--md-sys-color-on-surface);
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: 4px;
+    padding: 16px;
     width: 100%;
     box-sizing: border-box;
-    transition: box-shadow 0.2s, border-color 0.2s;
+    transition: box-shadow 0.2s var(--motion-easing), border-color 0.2s var(--motion-easing);
+    font-size: 16px;
+    height: 56px;
 }
 
 .qmx-input:hover {
-    border-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-on-surface);
 }
 
 .qmx-input:focus {
     outline: none;
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.3);
+    border-width: 2px;
+    padding: 15px; /* 保持内边距一致 */
 }
 
 /* 隐藏数字输入框的步进器箭头 */
@@ -34,47 +37,51 @@
     appearance: textfield;
 }
 
-/* --- 带单位的输入框 (Fieldset 样式) --- */
+/* --- 带单位的输入框 (Outlined Fieldset 样式) --- */
 .qmx-fieldset-unit {
     position: relative;
     padding: 0;
     margin: 0;
     border: 1px solid var(--md-sys-color-outline);
-    border-radius: 8px;
+    border-radius: 4px;
     background-color: var(--md-sys-color-surface-container);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s var(--motion-easing);
     width: 100%;
     box-sizing: border-box;
+    height: 56px;
+    display: flex;
+    align-items: center;
 }
 
 .qmx-fieldset-unit:hover {
-    border-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-on-surface);
 }
 
 .qmx-fieldset-unit:focus-within {
     border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.3);
+    border-width: 2px;
 }
 
 .qmx-fieldset-unit input[type="number"] {
     border: none;
     background: none;
     outline: none;
-    box-shadow: none;
     color: var(--md-sys-color-on-surface);
-    padding: 3px 10px 4px 10px;
+    padding: 16px;
     width: 100%;
     box-sizing: border-box;
+    font-size: 16px;
 }
 
 .qmx-fieldset-unit legend {
-    padding: 0 6px;
+    padding: 0 4px;
     font-size: 12px;
     color: var(--md-sys-color-on-surface-variant);
-    margin-left: auto;
-    margin-right: 12px;
-    text-align: right;
+    margin-left: 12px;
     pointer-events: none;
+    position: absolute;
+    top: -8px;
+    background-color: var(--md-sys-color-surface-container);
 }
 
 /* --- 滑动开关 (Toggle Switch) --- */
@@ -82,7 +89,7 @@
     position: relative;
     display: inline-block;
     width: 52px;
-    height: 30px;
+    height: 32px;
 }
 
 .qmx-toggle input {
@@ -99,22 +106,21 @@
     right: 0;
     bottom: 0;
     background-color: var(--md-sys-color-surface-container);
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 30px;
-    transition: background-color 0.3s, border-color 0.3s;
+    border: 2px solid var(--md-sys-color-outline);
+    border-radius: 16px;
+    transition: background-color 0.3s var(--motion-easing), border-color 0.3s var(--motion-easing);
 }
 
 .qmx-toggle .slider:before {
     position: absolute;
     content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 3px;
-    background-color: var(--md-sys-color-on-surface-variant);
+    height: 16px;
+    width: 16px;
+    left: 6px;
+    bottom: 6px;
+    background-color: var(--md-sys-color-outline);
     border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s var(--motion-easing);
 }
 
 .qmx-toggle input:checked + .slider {
@@ -124,14 +130,18 @@
 
 .qmx-toggle input:checked + .slider:before {
     background-color: var(--md-sys-color-on-primary);
-    transform: translateX(22px);
+    transform: translateX(20px);
+    height: 24px;
+    width: 24px;
+    left: 2px;
+    bottom: 2px;
 }
 
 .qmx-toggle:hover .slider {
-    border-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-on-surface-variant);
 }
 
-/* --- 自定义下拉菜单 --- */
+/* --- 自定义下拉菜单 (Outlined) --- */
 .qmx-select {
     position: relative;
     width: 100%;
@@ -139,40 +149,40 @@
 
 .qmx-select-styled {
     position: relative;
-    padding: 10px 30px 10px 12px;
+    padding: 16px 40px 16px 16px;
     background-color: var(--md-sys-color-surface-container);
     border: 1px solid var(--md-sys-color-outline);
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s var(--motion-easing);
     user-select: none;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+    height: 56px;
+    box-sizing: border-box;
+    font-size: 16px;
+    color: var(--md-sys-color-on-surface);
 }
 
 .qmx-select-styled::after {
-    content: "";
+    content: "▼";
     position: absolute;
     top: 50%;
-    right: 12px;
+    right: 16px;
     transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid var(--md-sys-color-on-surface-variant);
-    transition: transform 0.3s ease;
+    color: var(--md-sys-color-on-surface-variant);
+    transition: transform 0.3s var(--motion-easing);
+    font-size: 12px;
 }
 
 .qmx-select:hover .qmx-select-styled {
-    border-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-on-surface);
 }
 
 .qmx-select.active .qmx-select-styled {
     border-color: var(--md-sys-color-primary);
-    box-shadow: inset 0 3px 6px rgba(0,0,0,0.1), 0 0 0 2px rgba(208, 188, 255, 0.3);
+    border-width: 2px;
 }
 
 .qmx-select.active .qmx-select-styled::after {
@@ -187,13 +197,14 @@
     z-index: 10;
     background-color: var(--md-sys-color-surface-bright);
     border: 1px solid var(--md-sys-color-outline);
-    border-radius: 8px;
+    border-radius: 4px;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
     transform: translateY(-10px);
-    transition: all 0.3s ease;
-    padding: 4px 0;
+    transition: all 0.3s var(--motion-easing);
+    padding: 8px 0;
+    box-shadow: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
 }
 
 .qmx-select.active .qmx-select-options {
@@ -203,13 +214,14 @@
 }
 
 .qmx-select-options div {
-    padding: 10px 12px;
+    padding: 12px 16px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s var(--motion-easing);
+    font-size: 16px;
 }
 
 .qmx-select-options div:hover {
-    background-color: rgba(208, 188, 255, 0.1);
+    background-color: var(--primary-container);
 }
 
 .qmx-select-options div.selected {
@@ -223,6 +235,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding: 16px 0;
 }
 
 .qmx-range-slider-container {
@@ -254,13 +267,13 @@
     border-radius: 50%;
     cursor: grab;
     border: none;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
+    transition: transform 0.2s var(--motion-easing), box-shadow 0.2s var(--motion-easing);
 }
 
 .qmx-range-slider-container input[type="range"]::-webkit-slider-thumb:active {
     cursor: grabbing;
-    transform: scale(1.1);
+    transform: scale(1.2);
+    box-shadow: 0 0 0 10px rgba(208, 188, 255, 0.3);
 }
 
 /* Firefox 滑块手柄样式 */
@@ -272,13 +285,13 @@
     border-radius: 50%;
     cursor: grab;
     border: none;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
+    transition: transform 0.2s var(--motion-easing), box-shadow 0.2s var(--motion-easing);
 }
 
 .qmx-range-slider-container input[type="range"]::-moz-range-thumb:active {
     cursor: grabbing;
-    transform: scale(1.1);
+    transform: scale(1.2);
+    box-shadow: 0 0 0 10px rgba(208, 188, 255, 0.3);
 }
 
 .qmx-range-slider-track-container {

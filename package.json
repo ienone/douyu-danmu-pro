@@ -1,12 +1,18 @@
 {
-  "name": "douyu-qmx-pro",
+  "name": "douyu-danmaku-assistant",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "斗鱼弹幕助手 - 畅快刷弹幕",
+  "keywords": ["douyu", "danmaku", "assistant", "userscript", "tampermonkey"],
+  "author": "ienone",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "echo 'TODO: Add linting'",
+    "clean": "rimraf dist"
   },
   "devDependencies": {
     "vite": "^7.1.3",

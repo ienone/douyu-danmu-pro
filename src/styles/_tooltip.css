@@ -1,43 +1,49 @@
-/* 工具提示组件样式 */
+/* 工具提示组件样式 (Material 3 Expressive) */
 
 /* --- 工具提示图标 --- */
 .qmx-tooltip-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background-color: var(--md-sys-color-outline);
     color: var(--md-sys-color-surface-container);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     cursor: help;
     user-select: none;
+    transition: background-color 0.2s var(--motion-easing), transform 0.2s var(--motion-easing);
 }
 
-/* --- 全局工具提示 --- */
+.qmx-tooltip-icon:hover {
+    background-color: var(--md-sys-color-on-surface-variant);
+    transform: scale(1.1);
+}
+
+/* --- 全局工具提示 (Plain Tooltip) --- */
 #qmx-global-tooltip {
     position: fixed;
     background-color: var(--surface-container-highest);
     color: var(--md-sys-color-on-surface);
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
+    font-size: 14px;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.4;
     z-index: 10002;
-    max-width: 250px;
+    max-width: 320px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-5px);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    transform: scale(0.9);
+    transition: opacity 0.15s var(--motion-easing), transform 0.15s var(--motion-easing), visibility 0.15s;
     pointer-events: none;
 }
 
 #qmx-global-tooltip.visible {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: scale(1);
 }
