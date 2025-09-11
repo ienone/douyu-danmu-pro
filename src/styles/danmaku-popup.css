@@ -151,3 +151,66 @@
 .dda-popup.animate-in {
     animation: fadeInUp 0.2s var(--motion-easing);
 }
+
+/* 输入预览栏样式 */
+.input-preview-bar {
+    position: fixed;
+    z-index: 9998;
+    background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 12px;
+    min-height: 40px;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: opacity 0.15s var(--motion-easing), transform 0.15s var(--motion-easing);
+}
+
+.input-preview-bar.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.input-preview-bar .preview-text {
+    flex: 1;
+    color: var(--md-sys-color-on-surface);
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 发送按钮样式 */
+.send-button {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s var(--motion-easing);
+    min-width: 50px;
+}
+
+.send-button:hover {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.send-button:active {
+    transform: scale(0.98);
+}
+
+/* 预览模式输入框样式 */
+input.preview-mode,
+textarea.preview-mode {
+    background-color: var(--md-sys-color-surface-bright) !important;
+    border-color: var(--md-sys-color-primary) !important;
+}
