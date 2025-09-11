@@ -7,9 +7,9 @@
  */
 
 import { CONFIG } from '../utils/CONFIG.js';
-// import { DanmakuDB } from './DanmakuDB.js';
-// import { UIManager } from './UIManager.js';
-// import { KeyboardController } from './KeyboardController.js';
+import { DanmakuDB } from './DanmakuDB.js';
+import { UIManager } from './UIManager.js';
+import { KeyboardController } from './KeyboardController.js';
 
 /**
  * 应用状态枚举
@@ -40,7 +40,10 @@ export const InputManager = {
     /**
      * 初始化输入管理器
      */
-    init() {
+    async init() {
+        // 初始化UIManager
+        await UIManager.init();
+        
         this.bindInputEvents();
         console.log('InputManager initialized');
     },
@@ -78,7 +81,7 @@ export const InputManager = {
         if (event.target === this.currentInput) {
             this.setState(APP_STATES.IDLE);
             this.currentInput = null;
-            // UIManager.hidePopup();
+            UIManager.hidePopup();
         }
     },
     
@@ -88,7 +91,7 @@ export const InputManager = {
     handleKeyDown(event) {
         if (!this.currentInput) return;
         
-        // KeyboardController.handleKeyDown(event, this.currentState);
+        KeyboardController.handleKeyDown(event, this.currentState);
     },
     
     /**
@@ -116,21 +119,22 @@ export const InputManager = {
     async processInput(inputValue) {
         if (inputValue.length < CONFIG.MIN_SEARCH_LENGTH) {
             this.setState(APP_STATES.IDLE);
-            // UIManager.hidePopup();
+            UIManager.hidePopup();
             return;
         }
         
         this.setState(APP_STATES.TYPING);
         
-        // TODO: 从数据库搜索匹配的弹幕模板
-        // const suggestions = await DanmakuDB.search(inputValue);
-        // this.currentSuggestions = suggestions;
+        // 从数据库搜索匹配的弹幕模板
+        const suggestions = await DanmakuDB.search(inputValue);
+        this.currentSuggestions = suggestions;
         
-        // if (suggestions.length > 0) {
-        //     UIManager.showPopup(suggestions, this.currentInput);
-        // } else {
-        //     UIManager.hidePopup();
-        // }
+        if (suggestions.length > 0) {
+            this.setState(APP_STATES.SELECTING);
+            UIManager.showPopup(suggestions, this.currentInput);
+        } else {
+            UIManager.hidePopup();
+        }
     },
     
     /**
@@ -152,14 +156,14 @@ export const InputManager = {
     onStateChange(oldState, newState) {
         switch (newState) {
             case APP_STATES.IDLE:
-                // UIManager.hidePopup();
+                UIManager.hidePopup();
                 break;
             case APP_STATES.TYPING:
                 // 保持当前UI状态
                 break;
             case APP_STATES.SELECTING:
                 // 高亮第一个候选项
-                // UIManager.setActiveIndex(0);
+                UIManager.setActiveIndex(0);
                 break;
         }
     },
@@ -181,13 +185,9 @@ export const InputManager = {
         
         const suggestion = this.currentSuggestions[index];
         if (this.currentInput && suggestion) {
-            this.currentInput.value = suggestion.text;
+            // 使用UIManager选择候选项
+            UIManager.selectCandidate(suggestion);
             this.setState(APP_STATES.IDLE);
-            // UIManager.hidePopup();
-            
-            // 触发输入框的input事件
-            const inputEvent = new Event('input', { bubbles: true });
-            this.currentInput.dispatchEvent(inputEvent);
         }
     }
 };

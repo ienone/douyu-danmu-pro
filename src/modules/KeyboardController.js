@@ -9,6 +9,13 @@
 import { CONFIG } from '../utils/CONFIG.js';
 import { APP_STATES } from './InputManager.js';
 
+// 延迟导入UIManager以避免循环依赖
+let UIManager;
+(async () => {
+    const module = await import('./UIManager.js');
+    UIManager = module.UIManager;
+})();
+
 /**
  * 键盘控制器
  */
@@ -109,8 +116,10 @@ export const KeyboardController = {
      */
     handleSelection(event) {
         event.preventDefault();
-        // TODO: 通知InputManager选择当前项
-        // InputManager.selectSuggestion(this.activeIndex);
+        // 通知UIManager选择当前项
+        if (UIManager) {
+            UIManager.selectActiveCandidate();
+        }
     },
     
     /**
@@ -118,8 +127,10 @@ export const KeyboardController = {
      */
     handleCancel(event) {
         event.preventDefault();
-        // TODO: 通知InputManager取消选择
-        // InputManager.setState(APP_STATES.IDLE);
+        // 通知UIManager取消选择
+        if (UIManager) {
+            UIManager.hidePopup();
+        }
     },
     
     /**
@@ -127,20 +138,13 @@ export const KeyboardController = {
      * @param {number} delta - 移动方向，-1为上，1为下
      */
     moveSelection(delta) {
-        // TODO: 从InputManager获取候选项数量
-        const maxIndex = 10; // 临时值，需要从InputManager.currentSuggestions.length获取
-        
-        this.activeIndex += delta;
-        
-        // 循环选择
-        if (this.activeIndex < 0) {
-            this.activeIndex = maxIndex - 1;
-        } else if (this.activeIndex >= maxIndex) {
-            this.activeIndex = 0;
+        if (UIManager) {
+            if (delta < 0) {
+                UIManager.navigateUp();
+            } else {
+                UIManager.navigateDown();
+            }
         }
-        
-        // TODO: 通知UIManager更新视觉选择
-        // UIManager.setActiveIndex(this.activeIndex);
     },
     
     /**
