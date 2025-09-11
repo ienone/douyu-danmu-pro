@@ -10,6 +10,8 @@ import { CONFIG } from '../utils/CONFIG.js';
 import { DanmakuDB } from './DanmakuDB.js';
 import { UIManager } from './UIManager.js';
 import { KeyboardController } from './KeyboardController.js';
+import { InputDetector, INPUT_TYPES } from './InputDetector.js';
+import { NativeSetter } from '../utils/NativeSetter.js';
 
 /**
  * 应用状态枚举
@@ -37,12 +39,24 @@ export const InputManager = {
     // 防抖定时器
     debounceTimer: null,
     
+    // 已处理的输入框
+    processedInputs: new WeakSet(),
+    
     /**
      * 初始化输入管理器
      */
     async init() {
+        // 初始化NativeSetter
+        NativeSetter.init();
+        
         // 初始化UIManager
         await UIManager.init();
+        
+        // 初始化InputDetector
+        InputDetector.init({
+            onInputDetected: this.handleInputDetected.bind(this),
+            onInputRemoved: this.handleInputRemoved.bind(this)
+        });
         
         this.bindInputEvents();
         console.log('InputManager initialized');
@@ -62,13 +76,103 @@ export const InputManager = {
     },
     
     /**
+     * 处理检测到新输入框
+     * @param {HTMLElement} input - 输入框元素
+     * @param {string} type - 输入框类型
+     */
+    handleInputDetected(input, type) {
+        if (this.processedInputs.has(input)) return;
+        
+        this.processedInputs.add(input);
+        console.log(`Processing detected input of type: ${type}`);
+        
+        // 根据类型进行特殊处理
+        this.setupInputByType(input, type);
+    },
+    
+    /**
+     * 处理输入框移除
+     * @param {HTMLElement} input - 输入框元素
+     * @param {string} type - 输入框类型
+     */
+    handleInputRemoved(input, type) {
+        if (!this.processedInputs.has(input)) return;
+        
+        this.processedInputs.delete(input);
+        
+        // 如果是当前活跃输入框，清理状态
+        if (this.currentInput === input) {
+            this.currentInput = null;
+            this.setState(APP_STATES.IDLE);
+            UIManager.hidePopup();
+        }
+        
+        console.log(`Removed input of type: ${type}`);
+    },
+    
+    /**
+     * 根据输入框类型进行设置
+     * @param {HTMLElement} input - 输入框元素
+     * @param {string} type - 输入框类型
+     */
+    setupInputByType(input, type) {
+        switch (type) {
+            case INPUT_TYPES.MAIN_CHAT:
+                this.setupMainChatInput(input);
+                break;
+            case INPUT_TYPES.FULLSCREEN_FLOAT:
+                this.setupFullscreenInput(input);
+                break;
+        }
+    },
+    
+    /**
+     * 设置主聊天区输入框
+     * @param {HTMLElement} input - 输入框元素
+     */
+    setupMainChatInput(input) {
+        // 主聊天区输入框需要在focus时才处理，避免与框架冲突
+        const focusHandler = (event) => {
+            this.currentInput = input;
+            this.setState(APP_STATES.IDLE);
+            console.log('Main chat input focused and activated');
+        };
+        
+        input.addEventListener('focus', focusHandler, { once: true });
+        
+        // 重新绑定focus事件，确保每次focus都能激活
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                input.addEventListener('focus', focusHandler, { once: true });
+            }, 100);
+        });
+    },
+    
+    /**
+     * 设置全屏浮动输入框
+     * @param {HTMLElement} input - 输入框元素
+     */
+    setupFullscreenInput(input) {
+        // 全屏浮动输入框可以立即处理
+        console.log('Fullscreen input setup completed');
+        
+        const focusHandler = (event) => {
+            this.currentInput = input;
+            this.setState(APP_STATES.IDLE);
+            console.log('Fullscreen input focused and activated');
+        };
+        
+        input.addEventListener('focus', focusHandler);
+    },
+    
+    /**
      * 处理输入框获得焦点
      */
     handleFocusIn(event) {
         const target = event.target;
         
-        // 检查是否是聊天输入框（根据斗鱼页面结构判断）
-        if (this.isChatInput(target)) {
+        // 检查是否是我们识别的聊天输入框
+        if (InputDetector.isChatInput(target)) {
             this.currentInput = target;
             this.setState(APP_STATES.IDLE);
         }
@@ -172,9 +276,8 @@ export const InputManager = {
      * 判断元素是否是聊天输入框
      */
     isChatInput(element) {
-        // TODO: 根据斗鱼页面的实际结构来判断
-        // 这里需要分析斗鱼聊天输入框的特征
-        return element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+        // 使用InputDetector进行精确判断
+        return InputDetector.isChatInput(element);
     },
     
     /**

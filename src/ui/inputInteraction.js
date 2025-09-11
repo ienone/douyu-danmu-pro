@@ -7,6 +7,7 @@
  */
 
 import { CONFIG } from '../utils/CONFIG.js';
+import { NativeSetter } from '../utils/NativeSetter.js';
 
 /**
  * 输入框交互管理器
@@ -91,11 +92,8 @@ export const InputInteraction = {
             this.isPreviewMode = true;
         }
         
-        // 设置预览文本
-        inputEl.value = previewText;
-        
-        // 触发input事件以更新其他监听器
-        this._triggerInputEvent(inputEl);
+        // 使用原生Setter设置预览文本
+        NativeSetter.setValue(inputEl, previewText);
         
         // 设置光标到末尾
         this._setCursorToEnd(inputEl);
@@ -111,16 +109,13 @@ export const InputInteraction = {
     restoreOriginalInput(inputEl) {
         if (!inputEl || !this.isPreviewMode) return;
         
-        // 恢复原始值
-        inputEl.value = this.originalInputValue;
+        // 使用原生Setter恢复原始值
+        NativeSetter.setValue(inputEl, this.originalInputValue);
         this.isPreviewMode = false;
         this.originalInputValue = '';
         
         // 移除预览标记
         inputEl.classList.remove('preview-mode');
-        
-        // 触发input事件
-        this._triggerInputEvent(inputEl);
     },
     
     /**
@@ -256,8 +251,8 @@ export const InputInteraction = {
      */
     _handlePreviewSend(text, targetInput) {
         if (targetInput) {
-            // 设置输入框值
-            targetInput.value = text;
+            // 使用原生Setter设置输入框值
+            NativeSetter.setValue(targetInput, text);
             
             // 确认预览
             this.confirmPreview(targetInput);
