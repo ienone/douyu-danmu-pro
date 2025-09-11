@@ -46,9 +46,7 @@ class DouyuDanmakuAssistant {
             if (!dbSuccess) {
                 Utils.log('数据库初始化失败，某些功能可能无法正常工作', 'warn');
             }
-            
-            // 初始化设置管理器
-            await SettingsManager.init();
+
             
             // 初始化键盘控制器
             KeyboardController.init();
@@ -93,15 +91,7 @@ class DouyuDanmakuAssistant {
             ];
             
             for (const text of testTemplates) {
-                await DanmakuDB.add({
-                    text: text,
-                    tags: [],
-                    useCount: Math.floor(Math.random() * 10),
-                    lastUsed: Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000, // 最近一周
-                    createdAt: Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000, // 最近一个月
-                    syncState: 'local',
-                    category: 'default'
-                });
+                await DanmakuDB.add( text, []);
             }
             
             Utils.log('测试数据添加完成');

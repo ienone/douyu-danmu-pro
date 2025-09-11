@@ -12,7 +12,9 @@
 
 /* 组件样式 */
 @import './danmaku-popup.css';
+@import './candidate-capsules.css';
 @import './settings-panel.css';
+@import './preview.css';
 
 /* 通用样式 */
 @import './_forms.css';

@@ -8,13 +8,7 @@
 
 import { CONFIG } from '../utils/CONFIG.js';
 import { APP_STATES } from './InputManager.js';
-
-// 延迟导入UIManager以避免循环依赖
-let UIManager;
-(async () => {
-    const module = await import('./UIManager.js');
-    UIManager = module.UIManager;
-})();
+import { UIManager } from './UIManager.js';
 
 /**
  * 键盘控制器

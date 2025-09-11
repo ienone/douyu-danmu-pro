@@ -56,7 +56,7 @@
 }
 
 .dda-popup-item-active {
-    background-color: var(--primary-container);
+    background-color: var(--md-sys-color-on-primary-container);
     border-left: 3px solid var(--md-sys-color-primary);
 }
 

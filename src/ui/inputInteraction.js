@@ -7,7 +7,7 @@
  */
 
 import { CONFIG } from '../utils/CONFIG.js';
-import { NativeSetter } from '../utils/NativeSetter.js';
+import { NativeSetter } from '../utils/nativeSetter.js';
 
 /**
  * 输入框交互管理器

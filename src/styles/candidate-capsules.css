@@ -1,0 +1,136 @@
+/* 胶囊候选列表样式 */
+.ddp-candidate-capsules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: var(--md-sys-color-surface-container);
+    border-radius: 8px;
+    border: 1px solid var(--md-sys-color-outline);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 1000;
+    
+    /* 移除自动布局调整，让JavaScript手动控制 */
+    position: relative;
+}
+
+/* 单个胶囊样式 */
+.ddp-candidate-capsule {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    border-radius: 16px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.2s var(--motion-easing);
+    user-select: none;
+}
+
+.ddp-candidate-capsule:hover {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ddp-candidate-capsule.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 2px var(--md-sys-color-primary-container);
+}
+
+.ddp-candidate-capsule:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 容器滚动条样式 */
+.ddp-candidate-capsules::-webkit-scrollbar {
+    height: 6px;
+}
+
+.ddp-candidate-capsules::-webkit-scrollbar-track {
+    background: var(--md-sys-color-surface-bright);
+    border-radius: 3px;
+}
+
+.ddp-candidate-capsules::-webkit-scrollbar-thumb {
+    background: var(--md-sys-color-outline);
+    border-radius: 3px;
+}
+
+.ddp-candidate-capsules::-webkit-scrollbar-thumb:hover {
+    background: var(--md-sys-color-on-surface-variant);
+}
+
+/* 输入框预览状态样式 */
+.ddp-chat-input-preview {
+    color: var(--md-sys-color-on-surface-variant) !important;
+    font-style: italic;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .ddp-candidate-capsules {
+        gap: 6px;
+        padding: 6px 8px;
+    }
+    
+    .ddp-candidate-capsule {
+        padding: 4px 8px;
+        font-size: 12px;
+        max-width: 150px;
+    }
+    
+    /* 移动端也移除自动布局调整，让JavaScript控制 */
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+    .ddp-candidate-capsules {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    
+    .ddp-candidate-capsule:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* 动画效果 */
+@keyframes ddp-capsule-appear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ddp-candidate-capsules {
+    animation: ddp-capsule-appear 0.2s var(--motion-easing);
+}
+
+.ddp-candidate-capsule {
+    animation: ddp-capsule-appear 0.3s var(--motion-easing) backwards;
+}
+
+.ddp-candidate-capsule:nth-child(1) { animation-delay: 0.05s; }
+.ddp-candidate-capsule:nth-child(2) { animation-delay: 0.1s; }
+.ddp-candidate-capsule:nth-child(3) { animation-delay: 0.15s; }
+.ddp-candidate-capsule:nth-child(4) { animation-delay: 0.2s; }
+.ddp-candidate-capsule:nth-child(5) { animation-delay: 0.25s; }

@@ -6,6 +6,7 @@
  * =================================================================================
  */
 
+// 静态配置常量（不可变）
 export const CONFIG = {
     // 脚本标识
     SCRIPT_PREFIX: '[斗鱼弹幕助手]',
@@ -17,26 +18,6 @@ export const CONFIG = {
     
     // 设置存储前缀
     SETTINGS_KEY_PREFIX: 'dda_',
-    
-    // 搜索配置
-    MIN_SEARCH_LENGTH: 1,      // 最小搜索长度
-    MAX_SUGGESTIONS: 10,       // 最大建议数量
-    DEBOUNCE_DELAY: 300,       // 防抖延迟（毫秒）
-    
-    // 键盘快捷键配置
-    TRIGGER_KEYS: ['Tab'],                          // 触发候选项的键
-    NAVIGATION_KEYS: ['ArrowUp', 'ArrowDown'],      // 导航键
-    SELECT_KEYS: ['Enter', 'Tab'],                  // 选择键
-    CANCEL_KEYS: ['Escape'],                        // 取消键
-    
-    // UI配置
-    POPUP_SHOW_DELAY: 100,     // 弹窗显示延迟
-    POPUP_HIDE_DELAY: 200,     // 弹窗隐藏延迟
-    MAX_POPUP_HEIGHT: 300,     // 弹窗最大高度
-    ITEM_HEIGHT: 40,           // 候选项高度
-    
-    // 动画配置
-    ANIMATION_DURATION: 200,   // 动画持续时间
     
     // CSS类名
     CSS_CLASSES: {
@@ -50,5 +31,53 @@ export const CONFIG = {
         EMPTY_MESSAGE: 'dda-empty-message',
         PREVIEW_BAR: 'input-preview-bar',
         SEND_BUTTON: 'send-button'
+    },
+    
+    // 键盘事件配置
+    KEYBOARD: {
+        ENTER: 'Enter',
+        ESCAPE: 'Escape',
+        ARROW_UP: 'ArrowUp',
+        ARROW_DOWN: 'ArrowDown',
+        ARROW_LEFT: 'ArrowLeft',
+        ARROW_RIGHT: 'ArrowRight',
+        TAB: 'Tab',
+        BACKSPACE: 'Backspace'
+    },
+    
+    // 预览配置
+    PREVIEW: {
+        USER_INPUT_COLOR: '#000000',
+        PREVIEW_TEXT_COLOR: '#999999',
+        PREVIEW_BACKGROUND_COLOR: 'rgba(153, 153, 153, 0.1)',
+        DEBOUNCE_DELAY: 300 // 防抖延迟
     }
+};
+
+// 默认用户设置（用户可配置）
+export const DEFAULT_SETTINGS = {
+    // 搜索配置
+    minSearchLength: 1,        // 最小搜索长度
+    maxSuggestions: 10,        // 最大建议数量
+    debounceDelay: 300,        // 防抖延迟（毫秒）
+    
+    // 键盘快捷键配置
+    triggerKeys: ['Tab'],                           // 触发候选项的键
+    navigationKeys: ['ArrowUp', 'ArrowDown'],       // 导航键
+    selectKeys: ['Enter', 'Tab'],                   // 选择键
+    cancelKeys: ['Escape'],                         // 取消键
+    
+    // UI配置
+    popupShowDelay: 100,       // 弹窗显示延迟
+    popupHideDelay: 200,       // 弹窗隐藏延迟
+    maxPopupHeight: 300,       // 弹窗最大高度
+    itemHeight: 40,            // 候选项高度
+    
+    // 动画配置
+    animationDuration: 200,    // 动画持续时间
+    
+    // 功能开关
+    enableAutoComplete: true,   // 启用自动补全
+    enableKeyboardShortcuts: true, // 启用键盘快捷键
+    enablePreview: true         // 启用预览功能
 };

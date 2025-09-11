@@ -1,0 +1,47 @@
+/* 聊天输入框的父容器 */
+.ChatSend-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* 预览激活时，在输入框上层生成一个伪元素用于显示预览文本 */
+.ChatSend-txt.ddp-preview-active::after {
+    content: attr(data-preview); /* 读取 data-preview 属性作为内容 */
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    
+    /* 关键：让伪元素不可交互，事件可以穿透到下方的输入框 */
+    pointer-events: none; 
+    
+    /* 模拟输入框的内边距和字体 */
+    padding: var(--input-padding, 0 10px);
+    font-family: inherit;
+    font-size: inherit;
+    
+    /* 预览文本颜色 */
+    color: #999;
+    
+    /* 
+     * 利用 text-indent 将伪元素的内容推到用户已输入文本的后面
+     * 我们需要一个JS辅助来计算这个值
+     */
+    text-indent: var(--preview-indent, 0);
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+/* 
+ * [新布局方案] 
+ * 当候选项可见时，给聊天区增加下内边距，把输入框“顶”上来
+ */
+.layout-Player-chat.ddp-candidates-visible {
+    /* 增加约等于候选项列表高度的下内边距 */
+    padding-bottom: 40px; 
+    transition: padding-bottom 0.2s ease-out;
+}

@@ -221,7 +221,7 @@
 }
 
 .qmx-select-options div:hover {
-    background-color: var(--primary-container);
+    background-color: var(--md-sys-color-on-primary-container);
 }
 
 .qmx-select-options div.selected {
