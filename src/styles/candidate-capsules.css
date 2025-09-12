@@ -112,6 +112,46 @@
     position: relative;
 }
 
+/* === 胶囊文字显示模式样式 === */
+
+/* 文字滚动模式 - 悬停时文字滚动显示 */
+.ddp-candidate-capsule.text-scroll-mode {
+    position: relative;
+    overflow: hidden;
+}
+
+.ddp-candidate-capsule.text-scroll-mode .capsule-text {
+    display: inline-block;
+    transition: transform 2s ease-in-out;
+    white-space: nowrap;
+}
+
+.ddp-candidate-capsule.text-scroll-mode:hover .capsule-text {
+    animation: textScroll 3s ease-in-out infinite;
+}
+
+/* 文字滚动动画 */
+@keyframes textScroll {
+    0%, 20% { transform: translateX(0); }
+    40%, 60% { transform: translateX(calc(-100% + 100px)); }
+    80%, 100% { transform: translateX(0); }
+}
+
+/* 胶囊动态扩充模式 - 根据文字长度调整宽度 */
+.ddp-candidate-capsule.dynamic-expand-mode {
+    max-width: none;
+    width: auto;
+    min-width: 30px;
+    padding: 3px 12px; /* 增加水平内边距 */
+}
+
+/* 多行模式下的动态扩充调整 */
+.ddp-candidate-capsules.multi-row .ddp-candidate-capsule.dynamic-expand-mode {
+    flex: 0 0 auto; /* 不再固定宽度比例 */
+    max-width: 300px; /* 设置最大宽度避免过长 */
+    min-width: 60px;
+}
+
 /* 确保在斗鱼聊天区域中正确显示 */
 .layout-Player-chat .Chat .ddp-candidate-capsules {
     z-index: 1000;

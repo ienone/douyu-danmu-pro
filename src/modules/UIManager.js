@@ -1,8 +1,5 @@
 /**
- * =====================================        try {
-            // 初始化各个组件
-            CandidatePanel.init();
-            InputInteraction.init();=====================================
+ * =================================================================================
  * 斗鱼弹幕助手 - UI管理器
  * ---------------------------------------------------------------------------------
  * 统一管理所有UI组件，协调候选项弹窗和输入框交互
@@ -169,7 +166,23 @@ export const UIManager = {
             capsule.dataset.index = index;
             
             const text = suggestion.getDisplayText ? suggestion.getDisplayText() : suggestion.text;
-            capsule.textContent = text;
+            
+            // 根据配置的显示模式应用不同的样式和结构
+            const displayMode = CONFIG.DEFAULT_SETTINGS?.capsule?.displayMode || 'expand';
+            
+            if (displayMode === 'scroll') {
+                // 文字滚动模式
+                capsule.classList.add('text-scroll-mode');
+                const textSpan = document.createElement('span');
+                textSpan.className = 'capsule-text';
+                textSpan.textContent = text;
+                capsule.appendChild(textSpan);
+            } else {
+                // 胶囊扩充模式（默认）
+                capsule.classList.add('dynamic-expand-mode');
+                capsule.textContent = text;
+            }
+            
             capsule.title = text; // 添加tooltip显示完整文本
             
             // 添加点击事件

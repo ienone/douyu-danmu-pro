@@ -93,7 +93,7 @@ export const DEFAULT_SETTINGS = {
         fontSize: 12,               // 胶囊字体大小（像素）
         itemsPerRow: 4,             // 多行模式下每行显示的候选项数量
         singleRowMaxItems: 8,       // 单行模式下最大显示数量
-        displayMode: 'expand',      // 显示模式：'scroll'(文字滚动) 或 'expand'(胶囊扩充)
+        displayMode: 'scroll',      // 显示模式：'scroll'(文字滚动) 或 'expand'(胶囊扩充)
     },
 
     // 功能开关
