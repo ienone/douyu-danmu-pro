@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { CONFIG } from '../utils/CONFIG.js';
+import { CONFIG, DEFAULT_SETTINGS } from '../utils/CONFIG.js';
 import { Utils } from '../utils/utils.js';
 import { CandidatePanel } from '../ui/candidatePanel.js';
 import { InputInteraction } from '../ui/inputInteraction.js';
@@ -126,6 +126,22 @@ export const UIManager = {
      * @param {boolean} multiRow - 是否启用多行模式
      */
     showChatCandidateList(suggestions, targetInput, multiRow = false) {
+        // 首先设置CSS变量，确保样式与配置同步
+        const capsuleConfig = DEFAULT_SETTINGS.capsule;
+
+        
+        document.documentElement.style.setProperty('--ddp-capsule-item-height', `${capsuleConfig.height}px`); // 24px
+        document.documentElement.style.setProperty('--ddp-capsule-padding', '8px'); // 容器上下padding 8px (原值)
+        document.documentElement.style.setProperty('--ddp-capsule-margin', '8px'); // margin 8px (会计入测量高度)
+        document.documentElement.style.setProperty('--ddp-capsule-item-padding', '3px'); // 胶囊内padding 3px (原值)
+        
+        Utils.log(`CSS变量已设置 (margin会计入高度):`);
+        Utils.log(`--ddp-capsule-item-height: 24px (胶囊高度)`);
+        Utils.log(`--ddp-capsule-padding: 8px (容器padding，计入高度)`);
+        Utils.log(`--ddp-capsule-margin: 8px (容器margin，计入高度)`);
+        Utils.log(`--ddp-capsule-item-padding: 3px (胶囊内padding)`);
+        Utils.log(`预期测量高度: 24px + 3*2 + 8*2 + 8*2 = 62px (margin计入高度)`);
+        
         // 查找 Chat 容器（正确的父级容器）
         const chat = document.querySelector('.layout-Player-chat .Chat');
         if (!chat) {
@@ -134,7 +150,10 @@ export const UIManager = {
             CandidatePanel.showPanel(targetInput);
             return;
         }
-        
+
+        // --- 新增：每次显示前重置 paddingBottom，防止累加 ---
+        chat.style.paddingBottom = '';
+
         // 立即应用CSS布局修复，确保输入框定位生效
         this.applyChatLayoutFix();
         
@@ -155,7 +174,7 @@ export const UIManager = {
         // 根据模式决定显示的候选项数量
         const maxItems = multiRow ? 
             suggestions.length : // 多行模式显示所有
-            Math.min(suggestions.length, CONFIG.DEFAULT_SETTINGS?.capsule?.singleRowMaxItems || 8); // 单行模式限制数量
+            Math.min(suggestions.length, DEFAULT_SETTINGS?.capsule?.singleRowMaxItems || 8); // 单行模式限制数量
         
         const displaySuggestions = suggestions.slice(0, maxItems);
         
@@ -168,7 +187,7 @@ export const UIManager = {
             const text = suggestion.getDisplayText ? suggestion.getDisplayText() : suggestion.text;
             
             // 根据配置的显示模式应用不同的样式和结构
-            const displayMode = CONFIG.DEFAULT_SETTINGS?.capsule?.displayMode || 'expand';
+            const displayMode = DEFAULT_SETTINGS?.capsule?.displayMode || 'expand';
             
             if (displayMode === 'scroll') {
                 // 文字滚动模式
@@ -271,28 +290,72 @@ export const UIManager = {
         Utils.log('=== CSS布局修复完成 ===');
     },
 
+
     /**
      * 更新聊天布局以适应候选框高度
      * @param {HTMLElement} candidateList - 候选列表元素
      */
     updateChatLayoutForCandidates(candidateList) {
         const chat = document.querySelector('.layout-Player-chat .Chat');
-        
         if (!chat || !candidateList) {
             Utils.log('缺少必要元素，跳过padding更新');
             return;
         }
+
+        // --- 新增：每次更新前重置 paddingBottom，防止累加 ---
+        chat.style.paddingBottom = '';
+
+        // 记录调试信息
+        const beforeHeight = chat.getBoundingClientRect().height;
+        const currentPadding = getComputedStyle(chat).paddingBottom;
+        const initialPaddingValue = parseFloat(currentPadding) || 0;
         
-        // 等待候选框渲染完成后再获取准确高度并设置适当的padding
+        Utils.log(`=== 更新候选框布局开始 ===`);
+        Utils.log(`Chat当前高度: ${beforeHeight}px`);
+        Utils.log(`Chat初始paddingBottom: ${initialPaddingValue}px (必须保留)`);
+        
+        // 使用配置的精确高度值
+        const configuredHeight = DEFAULT_SETTINGS.capsule.totalHeight;
+
+        // 获取 margin 值（上下合计）
+        const marginTop = parseFloat(getComputedStyle(candidateList).marginTop) || 0;
+        const marginBottom = parseFloat(getComputedStyle(candidateList).marginBottom) || 0;
+        const totalMargin = marginTop + marginBottom;
+
         requestAnimationFrame(() => {
-            const candidateHeight = candidateList.offsetHeight || 48;
-            
-            // 只设置为候选框高度，确保输入框在底部可见
-            const padding = candidateHeight + 10; // 候选框高度 + 10px小边距
-            
-            chat.style.paddingBottom = `${padding}px`;
-            
-            Utils.log(`候选框高度: ${candidateHeight}px, 设置内边距: ${padding}px`);
+            requestAnimationFrame(() => {
+                // 获取实际渲染高度进行验证
+                const actualHeight = Math.round(candidateList.getBoundingClientRect().height);
+
+                // 计算候选区总高度（内容高度 + margin）
+                const candidateHeightWithMargin = actualHeight + totalMargin;
+
+                // 决定候选项实际需要的高度
+                const heightDifference = Math.abs(candidateHeightWithMargin - configuredHeight);
+                const candidateHeight = heightDifference <= 2 ? configuredHeight : candidateHeightWithMargin;
+
+                // 核心修复：最终的padding = 初始padding + 候选项高度（含margin）
+                const finalPadding =  initialPaddingValue + candidateHeight;
+
+                // “拉”力：向上移动的距离应该精确等于为候选项腾出的空间
+                document.documentElement.style.setProperty('--ddp-candidate-height', `${candidateHeight}px`);
+                
+                // “推”力：设置能容纳“候选项+初始间距”的总padding
+                chat.style.paddingBottom = `${finalPadding}px`;
+                
+                // --- 日志验证 ---
+                const afterHeight = chat.getBoundingClientRect().height;
+                const actualPaddingBottom = getComputedStyle(chat).paddingBottom;
+                const heightIncrease = afterHeight - beforeHeight;
+                
+                Utils.log(`候选项所需高度(含margin): ${candidateHeight}px`);
+                Utils.log(`最终设置padding: ${finalPadding}px (初始${initialPaddingValue}px + 候选项${candidateHeight}px)`);
+                Utils.log(`transform向上移动距离: ${candidateHeight}px`);
+                Utils.log(`实际应用padding: ${actualPaddingBottom}`);
+                Utils.log(`Chat更新后高度: ${afterHeight}px`);
+                Utils.log(`实际高度增加: ${heightIncrease}px (应约等于${candidateHeight}px)`);
+                Utils.log(`=== 候选框布局更新完成 ===`);
+            });
         });
     },
     
@@ -313,12 +376,20 @@ export const UIManager = {
         // 移除CSS类，让元素恢复原始布局
         chatArea.classList.remove('ddp-candidates-visible');
         
-        // 只清除padding，不干扰其他样式
+        // 清除所有相关CSS变量
+        document.documentElement.style.removeProperty('--ddp-candidate-height');
+        document.documentElement.style.removeProperty('--ddp-capsule-item-height');
+        document.documentElement.style.removeProperty('--ddp-capsule-padding');
+        document.documentElement.style.removeProperty('--ddp-capsule-margin');
+        document.documentElement.style.removeProperty('--ddp-capsule-total-height');
+        document.documentElement.style.removeProperty('--ddp-capsule-item-padding');
+        
+        // 重置padding为空字符串，恢复CSS默认值
         if (chat) {
-            chat.style.removeProperty('padding-bottom');
+            chat.style.paddingBottom = '';
         }
         
-        Utils.log('已移除 ddp-candidates-visible 类，布局已恢复');
+        Utils.log('已移除 ddp-candidates-visible 类，清理所有CSS变量和padding，布局已恢复');
         Utils.log('=== CSS布局恢复完成 ===');
     },
     

@@ -11,10 +11,11 @@
     display: flex;
     flex-wrap: nowrap; /* 单行模式默认不换行 */
     gap: 6px;
-    padding: 8px 12px;
+    /* 使用CSS变量，与配置文件保持同步 */
+    padding: var(--ddp-capsule-padding, 8px) 12px;
     background: rgba(0, 0, 0, 0.85);
     border-radius: 8px;
-    margin: 8px 12px;
+    margin: var(--ddp-capsule-margin, 8px) 12px;
     max-width: calc(100% - 24px);
     overflow-x: auto;
     overflow-y: hidden;
@@ -55,7 +56,7 @@
 /* 胶囊候选项基础样式 - 优化为更小更紧凑 */
 .ddp-candidate-capsule {
     flex-shrink: 0;
-    padding: 3px 8px;
+    padding: var(--ddp-capsule-item-padding, 3px) 8px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
@@ -69,7 +70,8 @@
     text-overflow: ellipsis;
     max-width: 120px; /* 减小最大宽度以适应更多内容 */
     min-width: 30px;
-    height: 24px; /* 减小高度 */
+    /* 使用CSS变量控制高度 */
+    height: var(--ddp-capsule-item-height, 24px);
     display: flex;
     align-items: center;
     justify-content: center;

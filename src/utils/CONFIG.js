@@ -89,7 +89,10 @@ export const DEFAULT_SETTINGS = {
     // 胶囊候选项配置
     capsule: {
         maxWidth: 5000,              // 胶囊最大宽度（像素）
-        height: 24,                 // 胶囊高度（像素）
+        height: 24,                 // 胶囊内容高度（像素）
+        padding: 16,                // 容器上下内边距总和 (8px * 2)
+        margin: 16,                 // 容器外边距总和 (8px * 2)
+        totalHeight: 40,            // 总体高度 (24 + 16) - 用于布局计算
         fontSize: 12,               // 胶囊字体大小（像素）
         itemsPerRow: 4,             // 多行模式下每行显示的候选项数量
         singleRowMaxItems: 8,       // 单行模式下最大显示数量
