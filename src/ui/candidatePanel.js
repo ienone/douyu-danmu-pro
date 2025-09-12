@@ -49,6 +49,10 @@ export const CandidatePanel = {
         this.panelElement.className = CONFIG.CSS_CLASSES.POPUP;
         this.panelElement.style.display = 'none';
         
+        // 添加调试信息
+        console.log('创建弹窗元素:', this.panelElement);
+        console.log('弹窗CSS类名:', CONFIG.CSS_CLASSES.POPUP);
+        
         // 创建内容容器
         this.contentElement = document.createElement('div');
         this.contentElement.className = CONFIG.CSS_CLASSES.POPUP_CONTENT;
@@ -57,6 +61,11 @@ export const CandidatePanel = {
         
         // 添加到页面
         document.body.appendChild(this.panelElement);
+        
+        // 验证元素是否成功添加
+        const addedElement = document.querySelector(`.${CONFIG.CSS_CLASSES.POPUP}`);
+        console.log('弹窗是否成功添加到DOM:', !!addedElement);
+        console.log('添加的弹窗元素:', addedElement);
     },
     
     /**

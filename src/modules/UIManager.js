@@ -1,5 +1,8 @@
 /**
- * =================================================================================
+ * =====================================        try {
+            // 初始化各个组件
+            CandidatePanel.init();
+            InputInteraction.init();=====================================
  * 斗鱼弹幕助手 - UI管理器
  * ---------------------------------------------------------------------------------
  * 统一管理所有UI组件，协调候选项弹窗和输入框交互
@@ -44,6 +47,9 @@ export const UIManager = {
         }
         
         try {
+            // 加载胶囊候选项样式
+            // this.loadCapsuleStyles();
+            
             // 初始化各个组件
             CandidatePanel.init();
             InputInteraction.init();
@@ -59,7 +65,6 @@ export const UIManager = {
             return false;
         }
     },
-    
     /**
      * 显示候选项弹窗
      * @param {Array} suggestions - 候选项列表
@@ -121,8 +126,9 @@ export const UIManager = {
      * 为聊天输入框显示横向胶囊候选列表
      * @param {Array} suggestions - 候选项列表
      * @param {HTMLElement} targetInput - 目标输入框
+     * @param {boolean} multiRow - 是否启用多行模式
      */
-    showChatCandidateList(suggestions, targetInput) {
+    showChatCandidateList(suggestions, targetInput, multiRow = false) {
         // 查找 Chat 容器（正确的父级容器）
         const chat = document.querySelector('.layout-Player-chat .Chat');
         if (!chat) {
@@ -138,21 +144,33 @@ export const UIManager = {
         // 移除可能存在的旧候选列表
         const existingList = document.querySelector('.ddp-candidate-capsules');
         if (existingList) {
+            // 清理动态样式
+            if (existingList._dynamicStyle) {
+                existingList._dynamicStyle.remove();
+            }
             existingList.remove();
         }
         
         // 创建候选列表容器
         const candidateList = document.createElement('div');
-        candidateList.className = 'ddp-candidate-capsules';
+        candidateList.className = `ddp-candidate-capsules ${multiRow ? 'multi-row' : ''}`;
+        
+        // 根据模式决定显示的候选项数量
+        const maxItems = multiRow ? 
+            suggestions.length : // 多行模式显示所有
+            Math.min(suggestions.length, CONFIG.DEFAULT_SETTINGS?.capsule?.singleRowMaxItems || 8); // 单行模式限制数量
+        
+        const displaySuggestions = suggestions.slice(0, maxItems);
         
         // 添加候选项胶囊
-        suggestions.forEach((suggestion, index) => {
+        displaySuggestions.forEach((suggestion, index) => {
             const capsule = document.createElement('div');
             capsule.className = `ddp-candidate-capsule ${index === this.activeIndex ? 'active' : ''}`;
             capsule.dataset.index = index;
             
             const text = suggestion.getDisplayText ? suggestion.getDisplayText() : suggestion.text;
             capsule.textContent = text;
+            capsule.title = text; // 添加tooltip显示完整文本
             
             // 添加点击事件
             capsule.addEventListener('click', () => {
@@ -174,7 +192,10 @@ export const UIManager = {
         // 更新布局以适应候选框高度
         this.updateChatLayoutForCandidates(candidateList);
         
-        Utils.log(`胶囊候选列表已显示，包含 ${suggestions.length} 个候选项，布局已调整`);
+        // 存储当前模式状态
+        this.currentCandidateMode = multiRow ? 'multi-row' : 'single-row';
+        
+        Utils.log(`胶囊候选列表已显示 (${this.currentCandidateMode})，包含 ${displaySuggestions.length}/${suggestions.length} 个候选项，布局已调整`);
         Utils.log(`DOM结构: Chat > [ChatToolBar, ddp-candidate-capsules, ChatSpeak]`);
     },
     
@@ -197,6 +218,10 @@ export const UIManager = {
         // 清理聊天胶囊列表和布局恢复
         const existingList = document.querySelector('.ddp-candidate-capsules');
         if (existingList) {
+            // 清理动态样式
+            if (existingList._dynamicStyle) {
+                existingList._dynamicStyle.remove();
+            }
             existingList.remove();
         }
 
@@ -208,6 +233,7 @@ export const UIManager = {
         this.currentTargetInput = null;
         this.activeIndex = -1;
         this.currentState = 'idle';
+        this.currentCandidateMode = null;
         
         Utils.log('弹窗已隐藏，布局已恢复');
     },
@@ -332,16 +358,51 @@ export const UIManager = {
         if (newCapsule) {
             newCapsule.classList.add('active');
             
-            // 滚动到可见区域
-            newCapsule.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'nearest', 
-                inline: 'center' 
-            });
+            // 在单行模式下智能滚动到可见区域
+            if (!candidateList.classList.contains('multi-row')) {
+                this.scrollCapsuleIntoView(candidateList, newCapsule);
+            } else {
+                // 多行模式使用默认滚动
+                newCapsule.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest', 
+                    inline: 'center' 
+                });
+            }
         }
     },
     
     /**
+     * 在单行模式下将胶囊滚动到可见区域
+     * @param {HTMLElement} candidateList - 候选列表容器
+     * @param {HTMLElement} capsule - 要滚动到的胶囊元素
+     */
+    scrollCapsuleIntoView(candidateList, capsule) {
+        const listRect = candidateList.getBoundingClientRect();
+        const capsuleRect = capsule.getBoundingClientRect();
+        const scrollLeft = candidateList.scrollLeft;
+        
+        // 计算胶囊相对于容器的位置
+        const capsuleRelativeLeft = capsule.offsetLeft;
+        const capsuleWidth = capsule.offsetWidth;
+        const listWidth = candidateList.offsetWidth;
+        
+        // 如果胶囊在右侧不可见区域
+        if (capsuleRelativeLeft + capsuleWidth > scrollLeft + listWidth) {
+            candidateList.scrollTo({
+                left: capsuleRelativeLeft + capsuleWidth - listWidth + 20, // 留20px边距
+                behavior: 'smooth'
+            });
+        }
+        // 如果胶囊在左侧不可见区域
+        else if (capsuleRelativeLeft < scrollLeft) {
+            candidateList.scrollTo({
+                left: Math.max(0, capsuleRelativeLeft - 20), // 留20px边距，不小于0
+                behavior: 'smooth'
+            });
+        }
+    },
+    
     /**
      * 导航到上一个候选项
      */
