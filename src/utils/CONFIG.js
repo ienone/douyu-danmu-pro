@@ -28,9 +28,7 @@ export const CONFIG = {
         POPUP_ITEM_ACTIVE: 'dda-popup-item-active',
         POPUP_ITEM_TEXT: 'dda-popup-item-text',
         POPUP_EMPTY: 'dda-popup-empty',
-        EMPTY_MESSAGE: 'dda-empty-message',
-        PREVIEW_BAR: 'input-preview-bar',
-        SEND_BUTTON: 'send-button'
+        EMPTY_MESSAGE: 'dda-empty-message'
     },
     
     // 键盘事件配置
@@ -45,39 +43,55 @@ export const CONFIG = {
         BACKSPACE: 'Backspace'
     },
     
-    // 预览配置
-    PREVIEW: {
-        USER_INPUT_COLOR: '#000000',
-        PREVIEW_TEXT_COLOR: '#999999',
-        PREVIEW_BACKGROUND_COLOR: 'rgba(153, 153, 153, 0.1)',
-        DEBOUNCE_DELAY: 300 // 防抖延迟
-    }
+    // API配置（开发者配置）
+    API: {
+        BASE_URL: 'https://api.example.com',
+        TIMEOUT: 5000,
+        RETRY_ATTEMPTS: 3
+    },
+    
+    // 开发配置
+    DEBUG: false,                   // 调试模式
+    LOG_LEVEL: 'info'              // 日志级别
 };
 
 // 默认用户设置（用户可配置）
 export const DEFAULT_SETTINGS = {
     // 搜索配置
-    minSearchLength: 1,        // 最小搜索长度
-    maxSuggestions: 10,        // 最大建议数量
-    debounceDelay: 300,        // 防抖延迟（毫秒）
+    minSearchLength: 1,             // 最小搜索长度
+    maxSuggestions: 10,             // 最大建议数量
+    debounceDelay: 300,             // 防抖延迟（毫秒）
     
     // 键盘快捷键配置
-    triggerKeys: ['Tab'],                           // 触发候选项的键
-    navigationKeys: ['ArrowUp', 'ArrowDown'],       // 导航键
-    selectKeys: ['Enter', 'Tab'],                   // 选择键
-    cancelKeys: ['Escape'],                         // 取消键
+    enterSelectionModeKey: 'ArrowUp',               // 进入选择模式的键
+    exitSelectionModeKey: 'ArrowDown',              // 退出选择模式的键
+    expandCandidatesKey: 'ArrowUp',                 // 扩展候选项的键（在选择模式下）
+    navigationLeftKey: 'ArrowLeft',                 // 向左导航键（在选择模式下）
+    navigationRightKey: 'ArrowRight',               // 向右导航键（在选择模式下）
+    selectKey: 'Enter',                             // 选择候选项的键
+    cancelKey: 'Escape',                            // 取消选择的键
     
-    // UI配置
-    popupShowDelay: 100,       // 弹窗显示延迟
-    popupHideDelay: 200,       // 弹窗隐藏延迟
-    maxPopupHeight: 300,       // 弹窗最大高度
-    itemHeight: 40,            // 候选项高度
+    // UI时间配置
+    popupShowDelay: 100,            // 弹窗显示延迟（毫秒）
+    popupHideDelay: 200,            // 弹窗隐藏延迟（毫秒）
+    animationDuration: 200,         // 动画持续时间（毫秒）
     
-    // 动画配置
-    animationDuration: 200,    // 动画持续时间
+    // UI尺寸配置
+    maxPopupHeight: 300,            // 弹窗最大高度（像素）
+    itemHeight: 40,                 // 候选项高度（像素）
+    maxCandidateWidth: 200,         // 候选项最大宽度（像素）
     
     // 功能开关
-    enableAutoComplete: true,   // 启用自动补全
+    enableAutoComplete: true,       // 启用自动补全
     enableKeyboardShortcuts: true, // 启用键盘快捷键
-    enablePreview: true         // 启用预览功能
+    enableSelectionMode: true,      // 启用选择模式
+    enableSound: false,             // 启用音效
+    
+    // 同步配置
+    enableSync: false,              // 启用云同步
+    syncInterval: 300000,           // 同步间隔（毫秒，5分钟）
+    
+    // 性能配置
+    maxCacheSize: 1000,             // 最大缓存条目数
+    cacheExpireTime: 86400000       // 缓存过期时间（毫秒，24小时）
 };

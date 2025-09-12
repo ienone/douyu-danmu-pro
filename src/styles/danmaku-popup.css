@@ -12,6 +12,7 @@
     z-index: 9999;
     background: var(--md-sys-color-surface-container);
     border: 1px solid var(--md-sys-color-outline);
+    transition: all .3s var(--motion-easing), box-shadow .3s var(--motion-easing); 
     border-radius: 12px;
     box-shadow: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
     max-width: 400px;
@@ -19,12 +20,18 @@
     overflow: hidden;
     opacity: 0;
     transform: translateY(-10px);
-    transition: opacity 0.2s var(--motion-easing), transform 0.2s var(--motion-easing);
 }
 
 .dda-popup.show {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* 选择模式激活时的弹窗样式 */
+.dda-popup.selection-mode-active {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 6px 16px 4px #0003, 0 2px 6px #0006, 0 0 0 1px var(--md-sys-color-primary);
+    background: var(--md-sys-color-surface-bright);
 }
 
 /* 弹窗内容区域 */
@@ -36,28 +43,35 @@
 
 /* 候选项 */
 .dda-popup-item {
-    padding: 8px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid var(--md-sys-color-outline);
-    transition: background-color 0.15s var(--motion-easing);
-    min-height: 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--md-sys-color-outline);
+  transition: all .2s var(--motion-easing);
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  border-left: 6px solid transparent; 
+  will-change: transform ;
 }
 
+/* 激活状态下，只改变颜色和 transform，不改变尺寸 */
+.dda-popup-item-active {
+  background-color: var(--md-sys-color-tertiary-container);
+  border-left-color: var(--md-sys-color-tertiary); 
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px #0003, inset 0 0 0 2px rgba(var(--md-sys-color-tertiary-rgb), .3);
+  z-index: 10;
+  
+}
 .dda-popup-item:last-child {
     border-bottom: none;
 }
 
-.dda-popup-item:hover,
-.dda-popup-item-active {
+.dda-popup-item:hover{
     background-color: var(--md-sys-color-surface-bright);
-}
-
-.dda-popup-item-active {
-    background-color: var(--md-sys-color-on-primary-container);
-    border-left: 3px solid var(--md-sys-color-primary);
+    transform: translateX(4px);
 }
 
 /* 弹幕文本 */
@@ -69,8 +83,8 @@
 }
 
 .dda-popup-item-active .dda-popup-item-text {
-    color: var(--md-sys-color-primary);
-    font-weight: 500;
+    color: var(--md-sys-color-on-tertiary-container);
+    font-weight: 600;
 }
 
 /* 标签容器 */
@@ -152,53 +166,6 @@
     animation: fadeInUp 0.2s var(--motion-easing);
 }
 
-/* 输入预览栏样式 */
-.input-preview-bar {
-    position: fixed;
-    z-index: 9998;
-    background: var(--md-sys-color-surface-container);
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    display: none;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 12px;
-    min-height: 40px;
-    opacity: 0;
-    transform: translateY(-5px);
-    transition: opacity 0.15s var(--motion-easing), transform 0.15s var(--motion-easing);
-}
-
-.input-preview-bar.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.input-preview-bar .preview-text {
-    flex: 1;
-    color: var(--md-sys-color-on-surface);
-    font-size: 14px;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* 发送按钮样式 */
-.send-button {
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.15s var(--motion-easing);
-    min-width: 50px;
-}
-
 .send-button:hover {
     background: var(--md-sys-color-primary-container);
     color: var(--md-sys-color-on-primary-container);
@@ -206,11 +173,4 @@
 
 .send-button:active {
     transform: scale(0.98);
-}
-
-/* 预览模式输入框样式 */
-input.preview-mode,
-textarea.preview-mode {
-    background-color: var(--md-sys-color-surface-bright) !important;
-    border-color: var(--md-sys-color-primary) !important;
 }

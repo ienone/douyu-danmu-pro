@@ -2,15 +2,13 @@
  * =================================================================================
  * 斗鱼弹幕助手 - UI管理器
  * ---------------------------------------------------------------------------------
- * 统一管理所有UI组件，协调候选项弹窗、预览和输入框交互
+ * 统一管理所有UI组件，协调候选项弹窗和输入框交互
  * =================================================================================
  */
 
 import { CONFIG } from '../utils/CONFIG.js';
 import { Utils } from '../utils/utils.js';
 import { CandidatePanel } from '../ui/candidatePanel.js';
-import { InputPreview } from '../ui/inputPreview.js';
-import { EnhancedInputPreview } from '../ui/enhancedInputPreview.js';
 import { InputInteraction } from '../ui/inputInteraction.js';
 import { CandidatePanelState } from '../ui/candidatePanelState.js';
 
@@ -34,6 +32,9 @@ export const UIManager = {
     // 当前活跃索引
     activeIndex: 0,
     
+    // 是否处于选择模式
+    isSelectionModeActive: false,
+    
     /**
      * 初始化UI管理器
      */
@@ -45,7 +46,6 @@ export const UIManager = {
         try {
             // 初始化各个组件
             CandidatePanel.init();
-            InputPreview.init();
             InputInteraction.init();
             
             // 绑定组件间的事件通信
@@ -73,7 +73,8 @@ export const UIManager = {
         
         this.currentSuggestions = suggestions || [];
         this.currentTargetInput = targetInput;
-        this.activeIndex = this.currentSuggestions.length > 0 ? 0 : -1;
+        // 在普通输入模式下不设置活跃索引，只有进入选择模式时才设置
+        this.activeIndex = -1;
         
         if (this.currentSuggestions.length === 0) {
             this.hidePopup();
@@ -131,6 +132,9 @@ export const UIManager = {
             return;
         }
         
+        // 立即应用CSS布局修复，确保输入框定位生效
+        this.applyChatLayoutFix();
+        
         // 移除可能存在的旧候选列表
         const existingList = document.querySelector('.ddp-candidate-capsules');
         if (existingList) {
@@ -158,23 +162,20 @@ export const UIManager = {
             candidateList.appendChild(capsule);
         });
         
-        // 将候选列表作为 Chat 的直接子级插入，与 ChatSpeak 和 ChatToolBar 同级
-        // 查找 ChatSpeak 元素，将候选列表插入到它之后
-        const chatToolBar = chat.querySelector('.ChatToolBar');
-        if (chatToolBar) {
-            chatToolBar.parentNode.insertBefore(candidateList, chatToolBar.nextSibling);
+        // 将候选列表插入到 ChatToolBar 之后、ChatSpeak 之前
+        // 这样 ChatToolBar 保持在顶部，ChatSpeak（输入框）保持在底部不动
+        const chatSpeak = chat.querySelector('.ChatSpeak');
+        if (chatSpeak) {
+            chatSpeak.parentNode.insertBefore(candidateList, chatSpeak);
         } else {
             chat.appendChild(candidateList);
         }
 
-        // 计算并调整聊天区域高度
-        this.adjustChatLayoutForCandidates(candidateList, targetInput);
-        
-        // 更新输入框预览
-        this.updateChatInputPreview(targetInput);
+        // 更新布局以适应候选框高度
+        this.updateChatLayoutForCandidates(candidateList);
         
         Utils.log(`胶囊候选列表已显示，包含 ${suggestions.length} 个候选项，布局已调整`);
-        Utils.log(`DOM结构: Chat > [ChatSpeak, ddp-candidate-capsules, ChatToolBar]`);
+        Utils.log(`DOM结构: Chat > [ChatToolBar, ddp-candidate-capsules, ChatSpeak]`);
     },
     
     /**
@@ -199,13 +200,8 @@ export const UIManager = {
             existingList.remove();
         }
 
-        // [精确布局恢复] 恢复原始聊天区域高度
-        this.restoreChatLayoutAfterCandidates();
-        
-        // 清除预览状态
-        if (this.currentTargetInput) {
-            EnhancedInputPreview.clearPreview();
-        }
+        // 恢复聊天布局（移除CSS类）
+        this.removeChatLayoutFix();
         
         // 重置状态
         this.currentSuggestions = [];
@@ -217,120 +213,74 @@ export const UIManager = {
     },
     
     /**
-     * 为候选项调整聊天布局
-     * @param {HTMLElement} candidateList - 候选列表元素
-     * @param {HTMLElement} targetInput - 目标输入框
+     * 应用聊天布局修复 - 只用CSS类控制，避免内联样式冲突
      */
-    adjustChatLayoutForCandidates(candidateList, targetInput) {
-        Utils.log('=== 开始调整聊天布局 ===');
+    applyChatLayoutFix() {
+        Utils.log('=== 应用CSS布局修复 ===');
         
         const chatArea = document.querySelector('.layout-Player-chat');
-        const chat = chatArea ? chatArea.querySelector('.Chat') : null;
         
-        if (!chat || !chatArea) {
-            Utils.log('未找到Chat或layout-Player-chat元素，跳过布局调整');
+        if (!chatArea) {
+            Utils.log('未找到聊天区域，跳过布局修复');
             return;
         }
         
-        // 完全清除可能存在的内联样式，防止CSS残留问题
-        chat.style.removeProperty('height');
-        chat.style.removeProperty('max-height');
-        chat.style.removeProperty('min-height');
-        chat.style.removeProperty('transition');
-        chatArea.style.removeProperty('height');
-        chatArea.style.removeProperty('max-height');
-        chatArea.style.removeProperty('min-height');
-        chatArea.style.removeProperty('transition');
-        chatArea.style.removeProperty('margin-top');
+        // 只添加CSS类，让CSS样式控制一切
+        chatArea.classList.add('ddp-candidates-visible');
         
-        // 等待两帧让浏览器完全重新计算布局
+        Utils.log('已添加 ddp-candidates-visible 类，CSS样式将控制布局');
+        Utils.log('=== CSS布局修复完成 ===');
+    },
+
+    /**
+     * 更新聊天布局以适应候选框高度
+     * @param {HTMLElement} candidateList - 候选列表元素
+     */
+    updateChatLayoutForCandidates(candidateList) {
+        const chat = document.querySelector('.layout-Player-chat .Chat');
+        
+        if (!chat || !candidateList) {
+            Utils.log('缺少必要元素，跳过padding更新');
+            return;
+        }
+        
+        // 等待候选框渲染完成后再获取准确高度并设置适当的padding
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                // 获取候选列表的实际高度
-                let candidateHeight = candidateList.offsetHeight;
-                if (candidateHeight === 0) {
-                    candidateHeight = 48; // 单行候选列表的固定高度
-                }
-                Utils.log(`候选列表高度: ${candidateHeight}px`);
-                
-                // 获取清除样式后的原始高度
-                const originalChatHeight = chat.offsetHeight;
-                const originalChatAreaHeight = chatArea.offsetHeight;
-                
-                Utils.log(`原始Chat高度: ${originalChatHeight}px`);
-                Utils.log(`原始ChatArea高度: ${originalChatAreaHeight}px`);
-                
-                // 保存原始高度到元素的dataset中
-                candidateList.dataset.originalChatHeight = originalChatHeight + 'px';
-                candidateList.dataset.originalChatAreaHeight = originalChatAreaHeight + 'px';
-                
-                // 简单的高度调整：只增加候选列表的高度
-                chat.style.height = (originalChatHeight + candidateHeight) + 'px';
-                chatArea.style.height = (originalChatAreaHeight + candidateHeight) + 'px';
-                
-                // 添加平滑过渡
-                chat.style.transition = 'height 0.3s ease';
-                chatArea.style.transition = 'height 0.3s ease';
-                
-                Utils.log(`应用后Chat高度: ${chat.style.height}`);
-                Utils.log(`应用后ChatArea高度: ${chatArea.style.height}`);
-                Utils.log('=== 布局调整完成 ===');
-            });
+            const candidateHeight = candidateList.offsetHeight || 48;
+            
+            // 只设置为候选框高度，确保输入框在底部可见
+            const padding = candidateHeight + 10; // 候选框高度 + 10px小边距
+            
+            chat.style.paddingBottom = `${padding}px`;
+            
+            Utils.log(`候选框高度: ${candidateHeight}px, 设置内边距: ${padding}px`);
         });
     },
     
     /**
-     * 恢复候选项后的聊天布局
+     * 移除聊天布局修复 - 恢复原始布局
      */
-    restoreChatLayoutAfterCandidates() {
-        Utils.log('=== 开始恢复聊天布局 ===');
+    removeChatLayoutFix() {
+        Utils.log('=== 移除CSS布局修复 ===');
         
         const chatArea = document.querySelector('.layout-Player-chat');
         const chat = chatArea ? chatArea.querySelector('.Chat') : null;
         
-        if (!chat || !chatArea) {
-            Utils.log('未找到Chat或layout-Player-chat元素，跳过布局恢复');
+        if (!chatArea) {
+            Utils.log('未找到聊天区域，跳过布局恢复');
             return;
         }
         
-        // 查找是否有保存的原始高度
-        const candidateList = document.querySelector('.ddp-candidate-capsules');
-        const originalChatHeight = candidateList ? candidateList.dataset.originalChatHeight : null;
-        const originalChatAreaHeight = candidateList ? candidateList.dataset.originalChatAreaHeight : null;
+        // 移除CSS类，让元素恢复原始布局
+        chatArea.classList.remove('ddp-candidates-visible');
         
-        Utils.log(`要恢复的Chat高度: ${originalChatHeight}`);
-        Utils.log(`要恢复的ChatArea高度: ${originalChatAreaHeight}`);
-        
-        // 直接移除所有内联样式，让CSS规则接管
-        // 这样可以避免任何可能的CSS残留问题
-        chat.style.removeProperty('height');
-        chat.style.removeProperty('transition');
-        chatArea.style.removeProperty('height');  
-        chatArea.style.removeProperty('transition');
-        
-        // 如果有保存的原始高度，使用它们（但通过removeProperty后再设置）
-        if (originalChatHeight && originalChatAreaHeight) {
-            // 等待一帧让浏览器应用removeProperty的效果
-            requestAnimationFrame(() => {
-                chat.style.height = originalChatHeight;
-                chatArea.style.height = originalChatAreaHeight;
-                chat.style.transition = 'height 0.3s ease';
-                chatArea.style.transition = 'height 0.3s ease';
-                
-                Utils.log(`重新应用Chat高度: ${originalChatHeight}`);
-                Utils.log(`重新应用ChatArea高度: ${originalChatAreaHeight}`);
-            });
+        // 只清除padding，不干扰其他样式
+        if (chat) {
+            chat.style.removeProperty('padding-bottom');
         }
         
-        Utils.log(`恢复后Chat样式高度: ${chat.style.height}`);
-        Utils.log(`恢复后ChatArea样式高度: ${chatArea.style.height}`);
-        
-        // 验证恢复结果
-        setTimeout(() => {
-            Utils.log(`验证恢复 - Chat最终offsetHeight: ${chat.offsetHeight}px`);
-            Utils.log(`验证恢复 - ChatArea最终offsetHeight: ${chatArea.offsetHeight}px`);
-            Utils.log('=== 聊天布局恢复完成 ===');
-        }, 350); // 等待动画完成
+        Utils.log('已移除 ddp-candidates-visible 类，布局已恢复');
+        Utils.log('=== CSS布局恢复完成 ===');
     },
     
     /**
@@ -353,20 +303,10 @@ export const UIManager = {
         if (isChatInput) {
             // 更新胶囊样式
             this.updateChatCandidateStyles(oldIndex, index);
-            // 更新输入框预览
-            this.updateChatInputPreview(this.currentTargetInput);
         } else {
             // 普通弹窗模式
             CandidatePanel.setActiveIndex(index);
             CandidatePanelState.setActiveByMouse(index);
-            
-            // 显示预览
-            const activeCandidate = this.currentSuggestions[index];
-            if (activeCandidate && this.currentTargetInput) {
-                const previewText = activeCandidate.getDisplayText ? 
-                    activeCandidate.getDisplayText() : activeCandidate.text;
-                this.showPreview(previewText);
-            }
         }
     },
     
@@ -402,26 +342,6 @@ export const UIManager = {
     },
     
     /**
-     * 更新聊天输入框预览
-     * @param {HTMLElement} targetInput - 目标输入框
-     */
-    updateChatInputPreview(targetInput) {
-        if (!targetInput || this.activeIndex < 0 || this.activeIndex >= this.currentSuggestions.length) {
-            EnhancedInputPreview.clearPreview();
-            return;
-        }
-        
-        const candidate = this.currentSuggestions[this.activeIndex];
-        const previewText = candidate.getDisplayText ? 
-            candidate.getDisplayText() : candidate.text;
-        
-        // 获取用户当前输入 (注意：现在直接从输入框获取)
-        const userInput = targetInput.value;
-        
-        // 显示增强预览
-        EnhancedInputPreview.showPreview(targetInput, userInput, previewText);
-    },
-    
     /**
      * 导航到上一个候选项
      */
@@ -461,7 +381,7 @@ export const UIManager = {
     },
     
     /**
-     * 导航到左侧候选项（用于聊天胶囊模式）
+     * 导航到左侧候选项
      */
     navigateLeft() {
         if (!this.initialized || this.currentSuggestions.length === 0) return;
@@ -474,7 +394,7 @@ export const UIManager = {
     },
     
     /**
-     * 导航到右侧候选项（用于聊天胶囊模式）
+     * 导航到右侧候选项
      */
     navigateRight() {
         if (!this.initialized || this.currentSuggestions.length === 0) return;
@@ -515,35 +435,16 @@ export const UIManager = {
             candidate.updateUsage();
         }
         
-        // 替换输入框内容
-        InputInteraction.replaceInputWithPreview(this.currentTargetInput, text);
-        
-        // 显示预览
-        this.showPreview(text);
+        // 直接替换输入框内容
+        InputInteraction.replaceInputWithText(this.currentTargetInput, text);
         
         // 隐藏候选项弹窗
         this.hidePopup();
         
-        Utils.log(`候选项已选择: ${text}`);
-    },
-    
-    /**
-     * 显示输入预览
-     * @param {string} previewText - 预览文本
-     */
-    showPreview(previewText) {
-        if (!this.initialized || !previewText || !this.currentTargetInput) return;
+        // 重置状态为空闲
+        this.currentState = 'idle';
         
-        InputPreview.renderInputPreview(previewText, this.currentTargetInput);
-    },
-    
-    /**
-     * 隐藏输入预览
-     */
-    hidePreview() {
-        if (!this.initialized) return;
-        
-        InputPreview.hidePreview();
+        Utils.log(`候选项已选择并填入输入框: ${text}`);
     },
     
     /**
@@ -562,11 +463,85 @@ export const UIManager = {
     },
     
     /**
-     * 检查预览是否可见
-     * @returns {boolean} 是否可见
+     * 清除活跃候选项索引和样式
      */
-    isPreviewVisible() {
-        return this.initialized && InputPreview.isVisible();
+    clearActiveIndex() {
+        this.activeIndex = -1;
+        
+        // 清除所有候选项的活跃样式
+        const chatCandidateList = document.querySelector('.ddp-candidate-capsules');
+        if (chatCandidateList) {
+            const capsules = chatCandidateList.querySelectorAll('.ddp-candidate-capsule');
+            capsules.forEach(capsule => {
+                capsule.classList.remove('active');
+            });
+        }
+        
+        // 清除传统弹窗中的活跃样式
+        if (CandidatePanel.panelElement) {
+            const items = CandidatePanel.panelElement.querySelectorAll('.dda-popup-item');
+            items.forEach(item => {
+                item.classList.remove('dda-popup-item-active');
+            });
+        }
+    },
+    
+    /**
+     * 设置选择模式状态
+     * @param {boolean} active - 是否激活选择模式
+     */
+    setSelectionModeActive(active) {
+        this.isSelectionModeActive = active;
+        
+        if (active) {
+            // 进入选择模式时，如果没有活跃索引，设置第一个为活跃
+            if (this.activeIndex === -1 && this.currentSuggestions.length > 0) {
+                this.setActiveIndex(0);
+            }
+        } else {
+            // 退出选择模式时，清除活跃索引
+            this.clearActiveIndex();
+        }
+        
+        // 更新候选项容器的选择模式样式
+        const chatCandidateList = document.querySelector('.ddp-candidate-capsules');
+        if (chatCandidateList) {
+            if (active) {
+                chatCandidateList.classList.add('selection-mode-active');
+            } else {
+                chatCandidateList.classList.remove('selection-mode-active');
+            }
+        }
+        
+        // 更新传统弹窗的选择模式样式
+        if (CandidatePanel.panelElement) {
+            if (active) {
+                CandidatePanel.panelElement.classList.add('selection-mode-active');
+            } else {
+                CandidatePanel.panelElement.classList.remove('selection-mode-active');
+            }
+        }
+        
+        Utils.log(`选择模式: ${active ? '激活' : '关闭'}`);
+    },
+    
+    /**
+     * 更新候选项列表
+     * @param {Array} suggestions - 新的候选项列表
+     */
+    updateCandidates(suggestions) {
+        this.currentSuggestions = suggestions;
+        
+        // 重新渲染候选项
+        if (this.currentTargetInput) {
+            const isChatInput = this.currentTargetInput.closest('.ChatSend');
+            
+            if (isChatInput) {
+                this.showChatCandidateList(suggestions, this.currentTargetInput);
+            } else {
+                CandidatePanel.renderCandidatePanel(suggestions, this.activeIndex);
+            }
+        }
     },
     
     /**
@@ -622,12 +597,6 @@ export const UIManager = {
             return;
         });
         
-        // 监听预览发送事件
-        document.addEventListener('previewSend', (event) => {
-            const { text, targetInput } = event.detail;
-            this.handlePreviewSend(text, targetInput);
-        });
-        
         // 监听弹窗状态变化
         document.addEventListener('panelShown', () => {
             this.currentState = 'selecting';
@@ -639,27 +608,6 @@ export const UIManager = {
     },
     
     /**
-     * 处理预览发送
-     * @param {string} text - 发送的文本
-     * @param {HTMLElement} targetInput - 目标输入框
-     */
-    handlePreviewSend(text, targetInput) {
-        // 如果是增强预览状态，确认预览
-        if (EnhancedInputPreview.isPreviewActive()) {
-            EnhancedInputPreview.confirmPreview(targetInput);
-        } else if (targetInput) {
-            // 传统预览确认
-            InputInteraction.confirmPreview(targetInput);
-        }
-        
-        // 隐藏UI
-        this.hidePopup();
-        this.hidePreview();
-        
-        Utils.log(`文本已发送: ${text}`);
-    },
-    
-    /**
      * 销毁UI管理器
      */
     destroy() {
@@ -667,8 +615,6 @@ export const UIManager = {
         
         // 销毁组件
         CandidatePanel.destroy();
-        InputPreview.destroy();
-        EnhancedInputPreview.destroy(); // 销毁增强预览组件
         InputInteraction.cleanup();
         
         // 重置状态

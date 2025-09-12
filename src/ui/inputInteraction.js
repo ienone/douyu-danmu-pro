@@ -2,7 +2,7 @@
  * =================================================================================
  * 斗鱼弹幕助手 - 输入框交互逻辑
  * ---------------------------------------------------------------------------------
- * 处理输入框联动及预览逻辑，协调输入框与候选项弹窗的交互
+ * 处理输入框联动逻辑，协调输入框与候选项弹窗的交互
  * =================================================================================
  */
 
@@ -19,12 +19,6 @@ export const InputInteraction = {
     
     // 输入框事件监听器映射
     inputListeners: new Map(),
-    
-    // 预览模式标记
-    isPreviewMode: false,
-    
-    // 原始输入值（预览前的值）
-    originalInputValue: '',
     
     /**
      * 初始化输入框交互
@@ -79,70 +73,21 @@ export const InputInteraction = {
     },
     
     /**
-     * 替换输入内容为预览
+     * 直接替换输入框内容
      * @param {HTMLElement} inputEl - 输入框元素
-     * @param {string} previewText - 预览文本
+     * @param {string} text - 要设置的文本
      */
-    replaceInputWithPreview(inputEl, previewText) {
+    replaceInputWithText(inputEl, text) {
         if (!inputEl) return;
         
-        // 保存原始值
-        if (!this.isPreviewMode) {
-            this.originalInputValue = inputEl.value;
-            this.isPreviewMode = true;
-        }
-        
-        // 使用原生Setter设置预览文本
-        NativeSetter.setValue(inputEl, previewText);
+        // 使用原生Setter设置文本
+        NativeSetter.setValue(inputEl, text);
         
         // 设置光标到末尾
         this._setCursorToEnd(inputEl);
         
-        // 添加预览标记
-        inputEl.classList.add('preview-mode');
-    },
-    
-    /**
-     * 恢复输入框原始内容
-     * @param {HTMLElement} inputEl - 输入框元素
-     */
-    restoreOriginalInput(inputEl) {
-        if (!inputEl || !this.isPreviewMode) return;
-        
-        // 使用原生Setter恢复原始值
-        NativeSetter.setValue(inputEl, this.originalInputValue);
-        this.isPreviewMode = false;
-        this.originalInputValue = '';
-        
-        // 移除预览标记
-        inputEl.classList.remove('preview-mode');
-    },
-    
-    /**
-     * 确认预览内容（将预览文本作为正式输入）
-     * @param {HTMLElement} inputEl - 输入框元素
-     */
-    confirmPreview(inputEl) {
-        if (!inputEl || !this.isPreviewMode) return;
-        
-        // 清除预览模式标记，但保持当前文本
-        this.isPreviewMode = false;
-        this.originalInputValue = '';
-        
-        // 移除预览标记
-        inputEl.classList.remove('preview-mode');
-        
-        // 触发input事件
+        // 触发input事件，让页面知道内容已改变
         this._triggerInputEvent(inputEl);
-    },
-    
-    /**
-     * 检查输入框是否处于预览模式
-     * @param {HTMLElement} inputEl - 输入框元素
-     * @returns {boolean} 是否为预览模式
-     */
-    isInPreviewMode(inputEl) {
-        return inputEl && inputEl.classList.contains('preview-mode');
     },
     
     /**
@@ -157,12 +102,6 @@ export const InputInteraction = {
      * 绑定全局事件
      */
     bindGlobalEvents() {
-        // 监听预览发送事件
-        document.addEventListener('previewSend', (event) => {
-            const { text, targetInput } = event.detail;
-            this._handlePreviewSend(text, targetInput);
-        });
-        
         // 监听候选项选择事件
         document.addEventListener('candidateSelected', (event) => {
             const { candidate } = event.detail;
@@ -195,11 +134,6 @@ export const InputInteraction = {
             if (this.activeInput === inputEl) {
                 this.activeInput = null;
                 
-                // 如果在预览模式，恢复原始内容
-                if (this.isPreviewMode) {
-                    this.restoreOriginalInput(inputEl);
-                }
-                
                 // 触发失焦事件
                 this._emitInputEvent('inputBlurred', { inputEl, event });
             }
@@ -213,13 +147,6 @@ export const InputInteraction = {
      * @private
      */
     _handleInputChange(event, inputEl) {
-        // 如果在预览模式下，用户手动修改了内容，则退出预览模式
-        if (this.isPreviewMode) {
-            this.isPreviewMode = false;
-            this.originalInputValue = '';
-            inputEl.classList.remove('preview-mode');
-        }
-        
         // 触发输入变化事件
         this._emitInputEvent('inputChanged', { 
             inputEl, 
@@ -244,25 +171,6 @@ export const InputInteraction = {
     },
     
     /**
-     * 处理预览发送
-     * @param {string} text - 发送的文本
-     * @param {HTMLElement} targetInput - 目标输入框
-     * @private
-     */
-    _handlePreviewSend(text, targetInput) {
-        if (targetInput) {
-            // 使用原生Setter设置输入框值
-            NativeSetter.setValue(targetInput, text);
-            
-            // 确认预览
-            this.confirmPreview(targetInput);
-            
-            // 模拟发送操作（可以根据实际需要调整）
-            this._simulateSend(targetInput);
-        }
-    },
-    
-    /**
      * 处理候选项选择
      * @param {Object} candidate - 选中的候选项
      * @private
@@ -270,7 +178,7 @@ export const InputInteraction = {
     _handleCandidateSelected(candidate) {
         if (this.activeInput && candidate) {
             const text = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
-            this.replaceInputWithPreview(this.activeInput, text);
+            this.replaceInputWithText(this.activeInput, text);
         }
     },
     
@@ -308,21 +216,6 @@ export const InputInteraction = {
     },
     
     /**
-     * 模拟发送操作
-     * @param {HTMLElement} inputEl - 输入框元素
-     * @private
-     */
-    _simulateSend(inputEl) {
-        // 模拟按下回车键
-        const enterEvent = new KeyboardEvent('keydown', {
-            key: 'Enter',
-            code: 'Enter',
-            bubbles: true
-        });
-        inputEl.dispatchEvent(enterEvent);
-    },
-    
-    /**
      * 清理所有事件监听器
      */
     cleanup() {
@@ -332,7 +225,5 @@ export const InputInteraction = {
         }
         
         this.activeInput = null;
-        this.isPreviewMode = false;
-        this.originalInputValue = '';
     }
 };

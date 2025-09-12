@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { CONFIG } from '../utils/CONFIG.js';
+import { CONFIG, DEFAULT_SETTINGS } from '../utils/CONFIG.js';
 import { Utils } from '../utils/utils.js';
 
 /**
@@ -121,48 +121,57 @@ export const DanmakuDB = {
     },
     
     /**
-     * 搜索弹幕模板
+     * 搜索弹幕模板（高效索引查询）
      * @param {string} query - 搜索关键词
      * @param {number} limit - 限制结果数量
      * @returns {Promise<Array>} 匹配的弹幕模板数组
      */
-    async search(query, limit = CONFIG.MAX_SUGGESTIONS) {
+    async search(query, limit = DEFAULT_SETTINGS.maxSuggestions) {
         if (!this.initialized || !query) {
+            Utils.log('搜索条件无效: 数据库未初始化或查询为空');
             return [];
         }
         
         try {
             const transaction = this.db.transaction([CONFIG.DB_STORE_NAME], 'readonly');
             const store = transaction.objectStore(CONFIG.DB_STORE_NAME);
-            const request = store.getAll();
             
-            return new Promise((resolve) => {
-                request.onsuccess = (event) => {
-                    const allData = event.target.result;
-                    const queryLower = query.toLowerCase();
-                    
-                    // 搜索匹配项
-                    const matches = allData
-                        .filter(item => {
-                            return item.text.toLowerCase().includes(queryLower) ||
-                                   item.tags.some(tag => tag.toLowerCase().includes(queryLower));
-                        })
-                        .sort((a, b) => {
-                            // 按使用频率和最近使用时间排序
-                            const scoreA = a.useCount * 0.7 + (Date.now() - a.lastUsed) * -0.3;
-                            const scoreB = b.useCount * 0.7 + (Date.now() - b.lastUsed) * -0.3;
-                            return scoreB - scoreA;
-                        })
-                        .slice(0, limit);
-                    
-                    resolve(matches);
-                };
-                
-                request.onerror = () => {
-                    Utils.log('搜索弹幕模板失败', 'error');
-                    resolve([]);
-                };
+            // 使用getAll来获取所有数据，然后在内存中过滤（对于小数据集更简单可靠）
+            const allData = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(new Error('获取数据失败'));
             });
+            
+            Utils.log(`从数据库获取到 ${allData.length} 条记录，开始过滤查询: "${query}"`);
+            
+            const lowerQuery = query.toLowerCase();
+            const results = [];
+            
+            for (const item of allData) {
+                if (results.length >= limit) break;
+                
+                // 检查文本匹配
+                const textMatch = item.text && item.text.toLowerCase().includes(lowerQuery);
+                // 检查标签匹配
+                const tagMatch = Array.isArray(item.tags) && 
+                    item.tags.some(tag => tag && tag.toLowerCase().includes(lowerQuery));
+                
+                if (textMatch || tagMatch) {
+                    results.push(item);
+                }
+            }
+            
+            // 按使用频率和最近使用时间排序
+            results.sort((a, b) => {
+                const scoreA = (a.useCount || 1) * 0.7 + (Date.now() - (a.lastUsed || a.createdAt || 0)) * -0.3;
+                const scoreB = (b.useCount || 1) * 0.7 + (Date.now() - (b.lastUsed || b.createdAt || 0)) * -0.3;
+                return scoreB - scoreA;
+            });
+            
+            Utils.log(`搜索 "${query}" 返回 ${results.length} 条结果`);
+            return results.slice(0, limit);
+            
         } catch (error) {
             Utils.log(`搜索弹幕模板异常: ${error.message}`, 'error');
             return [];

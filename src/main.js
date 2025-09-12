@@ -16,6 +16,7 @@ import { SettingsManager } from './modules/SettingsManager.js';
 // 导入样式
 import './styles/main.css';
 import './styles/danmaku-popup.css';
+import './styles/candidate-capsules.css';
 
 /**
  * 应用程序主类
@@ -70,9 +71,18 @@ class DouyuDanmakuAssistant {
      */
     async addTestData() {
         try {
+            // 确保数据库已初始化
+            if (!DanmakuDB.initialized) {
+                Utils.log('数据库未初始化，跳过添加测试数据', 'warn');
+                return;
+            }
+            
             // 检查是否已有数据
             const existingData = await DanmakuDB.getAll();
+            Utils.log(`当前数据库中有 ${existingData.length} 条记录`);
+            
             if (existingData.length > 0) {
+                Utils.log('数据库中已有数据，跳过添加测试数据');
                 return; // 已有数据，不添加测试数据
             }
             
@@ -90,13 +100,26 @@ class DouyuDanmakuAssistant {
                 '学到了'
             ];
             
+            let successCount = 0;
             for (const text of testTemplates) {
-                await DanmakuDB.add( text, []);
+                const result = await DanmakuDB.add(text, []);
+                if (result !== null) {
+                    successCount++;
+                    Utils.log(`成功添加测试数据: "${text}" (ID: ${result})`);
+                } else {
+                    Utils.log(`添加测试数据失败: "${text}"`, 'warn');
+                }
             }
             
-            Utils.log('测试数据添加完成');
+            Utils.log(`测试数据添加完成，成功添加 ${successCount}/${testTemplates.length} 条记录`);
+            
+            // 验证数据是否正确添加
+            const finalData = await DanmakuDB.getAll();
+            Utils.log(`验证：数据库中现在有 ${finalData.length} 条记录`);
+            
         } catch (error) {
-            Utils.log(`添加测试数据失败: ${error.message}`, 'warn');
+            Utils.log(`添加测试数据失败: ${error.message}`, 'error');
+            Utils.log(`错误堆栈: ${error.stack}`, 'error');
         }
     }
     

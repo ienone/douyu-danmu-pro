@@ -7,20 +7,20 @@
  */
 
 import { CONFIG } from '../utils/CONFIG.js';
-import { EnhancedInputPreview } from '../ui/enhancedInputPreview.js';
+import { Utils } from '../utils/utils.js';
 import { DanmakuDB } from './DanmakuDB.js';
 import { UIManager } from './UIManager.js';
-import { KeyboardController } from './KeyboardController.js';
 import { InputDetector, INPUT_TYPES } from './InputDetector.js';
 import { NativeSetter } from '../utils/nativeSetter.js';
+import { SettingsManager } from './SettingsManager.js';
 
 /**
  * 应用状态枚举
  */
 export const APP_STATES = {
     IDLE: 'idle',           // 空闲状态，等待用户输入
-    TYPING: 'typing',       // 用户正在输入
-    SELECTING: 'selecting'  // 用户正在选择候选项
+    TYPING: 'typing',       // 用户正在输入，候选项可见但未进入选择模式
+    SELECTING: 'selecting'  // 用户进入候选项选择模式
 };
 
 /**
@@ -36,6 +36,12 @@ export const InputManager = {
     
     // 当前候选项列表
     currentSuggestions: [],
+    
+    // 当前激活的索引
+    activeIndex: -1,
+    
+    // 是否处于选择模式
+    isInSelectionMode: false,
     
     // 添加防抖定时器
     debounceTimer: null,
@@ -71,9 +77,30 @@ export const InputManager = {
         document.addEventListener('focusin', this.handleFocusIn.bind(this));
         document.addEventListener('focusout', this.handleFocusOut.bind(this));
         
-        // 监听键盘事件
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        // 监听键盘事件（使用捕获阶段，以便更早拦截）
+        document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
         document.addEventListener('input', this.handleInput.bind(this));
+        
+        // 监听输入框值的变化（包括程序化的清空）
+        this.startInputValueWatcher();
+    },
+    
+    /**
+     * 启动输入框值监听器
+     */
+    startInputValueWatcher() {
+        setInterval(() => {
+            if (this.currentInput && this.currentSuggestions.length > 0) {
+                const currentValue = this.currentInput.value;
+                if (currentValue.length === 0) {
+                    // 输入框被清空了，立即隐藏候选项
+                    this.hidePopup();
+                    this.setState(APP_STATES.IDLE);
+                    this.isInSelectionMode = false;
+                    this.activeIndex = -1;
+                }
+            }
+        }, 100); // 每100ms检查一次
     },
     
     /**
@@ -187,24 +214,38 @@ export const InputManager = {
         console.log('失焦的元素:', event.target.className, 'value:', event.target.value);
         
         if (event.target === this.currentInput) {
-            console.log('当前输入框失焦，检查是否应该隐藏候选项...');
+            console.log('当前输入框失焦，检查焦点转移目标...');
             
-            // 检查输入框是否还有内容
-            const hasContent = this.currentInput && 
-                this.currentInput.value && 
-                this.currentInput.value.trim().length > 0;
+            // 判断 event.relatedTarget 是否在插件UI内
+            const related = event.relatedTarget;
+            const isPluginUI = related && (
+                related.closest('.dda-popup') || 
+                related.closest('.ddp-candidate-capsules')
+            );
             
-            console.log('输入框有内容:', hasContent);
-            
-            this.setState(APP_STATES.IDLE);
-            this.currentInput = null;
-            
-            // 只有在输入框为空时才隐藏候选项
-            if (!hasContent) {
-                console.log('输入框为空，隐藏候选项');
-                UIManager.hidePopup();
+            if (!isPluginUI) {
+                // 焦点转移到非插件UI，延迟检查输入框状态
+                setTimeout(() => {
+                    // 检查输入框内容
+                    const hasContent = this.currentInput && 
+                        this.currentInput.value && 
+                        this.currentInput.value.trim().length > 0;
+                    
+                    console.log('焦点转移到非插件UI，输入框有内容:', hasContent);
+                    
+                    this.setState(APP_STATES.IDLE);
+                    this.currentInput = null;
+                    
+                    // 只有在输入框为空时才隐藏候选项
+                    if (!hasContent) {
+                        console.log('输入框为空，隐藏候选项');
+                        this.hidePopup();
+                    } else {
+                        console.log('输入框有内容，保持候选项显示');
+                    }
+                }, 150); // 延迟150ms，给其他事件处理时间
             } else {
-                console.log('输入框有内容，保持候选项显示');
+                console.log('焦点转移到插件UI内，保持候选项显示');
             }
         }
     },
@@ -217,10 +258,12 @@ export const InputManager = {
         
         const inputValue = event.target.value;
         
-        // 如果输入为空，立即隐藏候选项并清除预览
+        // 如果输入为空，立即隐藏候选项
         if (inputValue.length === 0) {
-            UIManager.hidePopup();
-            EnhancedInputPreview.clearPreview();
+            this.hidePopup();
+            this.setState(APP_STATES.IDLE);
+            this.isInSelectionMode = false;
+            this.activeIndex = -1;
             if (this.debounceTimer) clearTimeout(this.debounceTimer);
             return;
         }
@@ -240,96 +283,217 @@ export const InputManager = {
         }
         
         // 设置新的定时器
+        const settings = SettingsManager.getSettings();
         this.debounceTimer = setTimeout(() => {
             this.processInput(inputValue);
-        }, CONFIG.PREVIEW.DEBOUNCE_DELAY);
+        }, settings.debounceDelay);
     },
     
     /**
-     * 处理键盘按下事件
+     * 处理键盘按下事件 - 统一处理所有状态下的键盘事件
      */
     handleKeyDown(event) {
         if (event.target !== this.currentInput) return;
         
         const key = event.key;
+        const settings = SettingsManager.getSettings();
         
-        // 如果是预览状态，优先处理预览相关按键
-        if (EnhancedInputPreview.isPreviewActive()) {
-            if (key === CONFIG.KEYBOARD.ENTER && !event.shiftKey) {
-                event.preventDefault();
-                EnhancedInputPreview.confirmPreview();
-                return;
-            } else if (key === CONFIG.KEYBOARD.ESCAPE) {
-                event.preventDefault();
-                EnhancedInputPreview.cancelPreview();
-                return;
+        // 检查是否有候选项可见
+        const hasVisibleCandidates = UIManager.isPopupVisible();
+        
+        if (hasVisibleCandidates) {
+            if (this.isInSelectionMode) {
+                // 选择模式下的按键处理
+                if (key === CONFIG.KEYBOARD.ARROW_UP) {
+                    event.preventDefault();
+                    this.navigateUp();
+                } else if (key === CONFIG.KEYBOARD.ARROW_DOWN) {
+                    // 按下键退出选择模式，返回输入模式
+                    event.preventDefault();
+                    this.exitSelectionMode();
+                } else if (key === CONFIG.KEYBOARD.ARROW_LEFT) {
+                    event.preventDefault();
+                    this.navigateLeft();
+                } else if (key === CONFIG.KEYBOARD.ARROW_RIGHT) {
+                    event.preventDefault();
+                    this.navigateRight();
+                } else if (key === CONFIG.KEYBOARD.ENTER && !event.shiftKey) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.selectActiveCandidate();
+                    this.exitSelectionMode();
+                } else if (key === CONFIG.KEYBOARD.ESCAPE) {
+                    event.preventDefault();
+                    this.exitSelectionMode();
+                    this.hidePopup();
+                }
+            } else {
+                // 输入模式下有候选项可见时的按键处理
+                if (key === CONFIG.KEYBOARD.ARROW_UP) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.enterSelectionMode();
+                }
             }
         }
-        
-        // UI管理器可见时的按键处理
-        if (UIManager.isPopupVisible()) {
-            switch (key) {
-                case CONFIG.KEYBOARD.ARROW_UP:
-                    event.preventDefault();
-                    UIManager.navigateUp();
-                    break;
-                case CONFIG.KEYBOARD.ARROW_DOWN:
-                    event.preventDefault();
-                    UIManager.navigateDown();
-                    break;
-                case CONFIG.KEYBOARD.ARROW_LEFT:
-                    // 聊天输入框模式下的左箭头
-                    if (this.currentInput.closest('.ChatSend')) {
-                        event.preventDefault();
-                        UIManager.navigateLeft();
-                    }
-                    break;
-                case CONFIG.KEYBOARD.ARROW_RIGHT:
-                    // 聊天输入框模式下的右箭头
-                    if (this.currentInput.closest('.ChatSend')) {
-                        event.preventDefault();
-                        UIManager.navigateRight();
-                    }
-                    break;
-                case CONFIG.KEYBOARD.ENTER:
-                    if (!event.shiftKey) {
-                        event.preventDefault();
-                        UIManager.selectActiveCandidate();
-                    }
-                    break;
-                case CONFIG.KEYBOARD.ESCAPE:
-                    event.preventDefault();
-                    UIManager.hidePopup();
-                    break;
-                case CONFIG.KEYBOARD.TAB:
-                    event.preventDefault();
-                    UIManager.selectActiveCandidate();
-                    break;
-            }
+    },
+    
+    /**
+     * 进入选择模式
+     */
+    enterSelectionMode() {
+        this.isInSelectionMode = true;
+        this.setState(APP_STATES.SELECTING);
+        UIManager.setSelectionModeActive(true);
+        if (this.currentSuggestions.length > 0) {
+            this.setActiveIndex(0);
         }
+        Utils.log('进入候选项选择模式');
+    },
+    
+    /**
+     * 退出选择模式
+     */
+    exitSelectionMode() {
+        this.isInSelectionMode = false;
+        this.setState(APP_STATES.TYPING);
+        UIManager.setSelectionModeActive(false);
+        this.setActiveIndex(-1);
+        Utils.log('退出候选项选择模式');
+    },
+    
+    /**
+     * 向上导航
+     */
+    navigateUp() {
+        if (this.currentSuggestions.length === 0) return;
+        let newIndex = this.activeIndex - 1;
+        if (newIndex < 0) {
+            newIndex = this.currentSuggestions.length - 1;
+        }
+        this.setActiveIndex(newIndex);
+    },
+    
+    /**
+     * 向下导航
+     */
+    navigateDown() {
+        if (this.currentSuggestions.length === 0) return;
+        let newIndex = this.activeIndex + 1;
+        if (newIndex >= this.currentSuggestions.length) {
+            newIndex = 0;
+        }
+        this.setActiveIndex(newIndex);
+    },
+    
+    /**
+     * 向左导航
+     */
+    navigateLeft() {
+        this.navigateUp();
+    },
+    
+    /**
+     * 向右导航
+     */
+    navigateRight() {
+        this.navigateDown();
+    },
+    
+    /**
+     * 设置活跃索引
+     */
+    setActiveIndex(index) {
+        if (index < -1 || (index >= this.currentSuggestions.length && index !== -1)) {
+            return;
+        }
+        this.activeIndex = index;
+        UIManager.setActiveIndex(index);
+    },
+    
+    /**
+     * 选择当前活跃的候选项
+     */
+    selectActiveCandidate() {
+        if (this.activeIndex >= 0 && this.activeIndex < this.currentSuggestions.length) {
+            const selectedCandidate = this.currentSuggestions[this.activeIndex];
+            this.selectCandidate(selectedCandidate);
+        }
+    },
+    
+    /**
+     * 选择指定候选项
+     */
+    selectCandidate(candidate) {
+        if (!candidate || !this.currentInput) return;
+        
+        const text = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
+        
+        // 更新使用统计
+        if (typeof candidate.updateUsage === "function") {
+            candidate.updateUsage();
+        } else if (candidate.id) {
+            DanmakuDB.updateUsage(candidate.id);
+        }
+        
+        // 填入输入框
+        NativeSetter.setValue(this.currentInput, text);
+        
+        // 隐藏弹窗
+        this.hidePopup();
+        this.setState(APP_STATES.IDLE);
+        this.isInSelectionMode = false;
+        this.activeIndex = -1;
+        
+        Utils.log(`候选项已选择并填入输入框: ${text}`);
+    },
+    
+    /**
+     * 隐藏弹窗
+     */
+    hidePopup() {
+        UIManager.hidePopup();
+        this.currentSuggestions = [];
+        this.activeIndex = -1;
     },
     
     /**
      * 处理输入内容
      */
     async processInput(inputValue) {
-        if (inputValue.length < CONFIG.MIN_SEARCH_LENGTH) {
+        const settings = SettingsManager.getSettings();
+        
+        if (inputValue.length < settings.minSearchLength) {
             this.setState(APP_STATES.IDLE);
-            UIManager.hidePopup(); // 明确隐藏弹窗
+            this.isInSelectionMode = false;
+            this.activeIndex = -1;
+            this.hidePopup();
             return;
         }
         
-        this.setState(APP_STATES.TYPING);
-        
         // 从数据库搜索匹配的弹幕模板
-        const suggestions = await DanmakuDB.search(inputValue);
+        let suggestions = await DanmakuDB.search(inputValue);
+        
+        // 如果数据库中没有数据，使用模拟数据进行测试
+        if (suggestions.length === 0) {
+            suggestions = [
+                { id: 1, text: '测试候选项1', tags: ['test'], useCount: 1, lastUsed: Date.now(), getDisplayText: function() { return this.text; } },
+                { id: 2, text: '测试候选项2', tags: ['test'], useCount: 2, lastUsed: Date.now(), getDisplayText: function() { return this.text; } },
+                { id: 3, text: '测试候选项3', tags: ['test'], useCount: 3, lastUsed: Date.now(), getDisplayText: function() { return this.text; } }
+            ];
+        }
+        
         this.currentSuggestions = suggestions;
         
         if (suggestions.length > 0) {
-            this.setState(APP_STATES.SELECTING);
+            // 有候选项时设置为TYPING状态，等待用户按上键进入SELECTING模式
+            this.setState(APP_STATES.TYPING);
+            this.isInSelectionMode = false;
             UIManager.showPopup(suggestions, this.currentInput);
         } else {
-            UIManager.hidePopup(); // 明确隐藏弹窗
+            this.setState(APP_STATES.IDLE);
+            this.isInSelectionMode = false;
+            this.hidePopup();
         }
     },
     
@@ -365,7 +529,9 @@ export const InputManager = {
             case APP_STATES.SELECTING:
                 // 高亮第一个候选项
                 console.log('状态变为SELECTING，设置活跃索引');
-                UIManager.setActiveIndex(0);
+                if (this.activeIndex === -1 && this.currentSuggestions.length > 0) {
+                    this.setActiveIndex(0);
+                }
                 break;
         }
     },
@@ -376,19 +542,5 @@ export const InputManager = {
     isChatInput(element) {
         // 使用InputDetector进行精确判断
         return InputDetector.isChatInput(element);
-    },
-    
-    /**
-     * 选择候选项
-     */
-    selectSuggestion(index) {
-        if (index < 0 || index >= this.currentSuggestions.length) return;
-        
-        const suggestion = this.currentSuggestions[index];
-        if (this.currentInput && suggestion) {
-            // 使用UIManager选择候选项
-            UIManager.selectCandidate(suggestion);
-            this.setState(APP_STATES.IDLE);
-        }
     }
 };

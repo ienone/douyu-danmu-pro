@@ -7,13 +7,24 @@
     margin-bottom: 4px;
     background: var(--md-sys-color-surface-container);
     border-radius: 8px;
-    border: 1px solid var(--md-sys-color-outline);
+    border: 2px solid var(--md-sys-color-outline); /* 固定边框宽度避免位移 */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     z-index: 1000;
+    transition: border-color 0.3s var(--motion-easing), box-shadow 0.3s var(--motion-easing), background-color 0.3s var(--motion-easing);
     
-    /* 移除自动布局调整，让JavaScript手动控制 */
+    /* 使用相对定位，配合JS动态调整父容器内边距 */
     position: relative;
+    /* 为子元素的transform预留空间，避免溢出导致的位移 */
+    contain: layout style;
+}
+
+/* 选择模式激活时的容器样式 */
+.ddp-candidate-capsules.selection-mode-active {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 
+                0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.1); /* 使用内阴影替代轮廓 */
+    background: var(--md-sys-color-surface-bright);
 }
 
 /* 单个胶囊样式 */
@@ -35,25 +46,35 @@
     text-overflow: ellipsis;
     transition: all 0.2s var(--motion-easing);
     user-select: none;
+    /* 移除will-change以减少重绘 */
+    /* 为transform效果预留空间 */
+    margin: 2px 0;
 }
 
 .ddp-candidate-capsule:hover {
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
     border-color: var(--md-sys-color-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    /* 改用scale代替translateY减少布局影响 */
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* 活跃候选项样式 - 优化的选择效果，避免位移 */
 .ddp-candidate-capsule.active {
-    background: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-    border-color: var(--md-sys-color-primary);
-    box-shadow: 0 0 0 2px var(--md-sys-color-primary-container);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-tertiary);
+    border-color: var(--md-sys-color-tertiary);
+    /* 使用scale和brightness组合效果，避免translate */
+    transform: scale(1.08);
+    filter: brightness(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25),
+                0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.25);
+    z-index: 10;
 }
 
 .ddp-candidate-capsule:active {
-    transform: translateY(0);
+    transform: scale(0.98);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
@@ -76,12 +97,6 @@
     background: var(--md-sys-color-on-surface-variant);
 }
 
-/* 输入框预览状态样式 */
-.ddp-chat-input-preview {
-    color: var(--md-sys-color-on-surface-variant) !important;
-    font-style: italic;
-}
-
 /* 响应式设计 */
 @media (max-width: 768px) {
     .ddp-candidate-capsules {
@@ -94,8 +109,6 @@
         font-size: 12px;
         max-width: 150px;
     }
-    
-    /* 移动端也移除自动布局调整，让JavaScript控制 */
 }
 
 /* 暗色主题适配 */

@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { CONFIG } from '../utils/CONFIG.js';
+import { CONFIG, DEFAULT_SETTINGS } from '../utils/CONFIG.js';
 
 /**
  * 设置管理器
@@ -62,6 +62,16 @@ export const SettingsManager = {
         });
         
         return settings;
+    },
+    
+    /**
+     * 获取完整的设置对象（合并默认设置和用户设置）
+     * @returns {object} 合并后的设置对象
+     */
+    getSettings() {
+        const userSettings = this.getAll();
+        // 使用默认设置作为基础，用户设置覆盖
+        return { ...DEFAULT_SETTINGS, ...userSettings };
     },
     
     /**
