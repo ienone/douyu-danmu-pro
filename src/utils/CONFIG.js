@@ -13,7 +13,7 @@ export const CONFIG = {
     
     // 数据库配置
     DB_NAME: 'DouyuDanmakuAssistant',
-    DB_VERSION: 1,
+    DB_VERSION: 2,
     DB_STORE_NAME: 'danmaku_templates',
     
     // 设置存储前缀
@@ -61,6 +61,13 @@ export const DEFAULT_SETTINGS = {
     minSearchLength: 1,             // 最小搜索长度
     maxSuggestions: 10,             // 最大建议数量
     debounceDelay: 300,             // 防抖延迟（毫秒）
+    
+    // 排序配置
+    sortBy: 'relevance',             // 默认排序方式
+    autoImportEnabled: false,        // 启用自动导入
+    autoImportMaxPages: 5,          // 自动导入最大页数
+    autoImportPageSize: 50,         // 自动导入每页条目数
+    autoImportSortByPopularity: true, // 自动导入时按人气排序
     
     // 键盘快捷键配置
     enterSelectionModeKey: 'ArrowUp',               // 进入选择模式的键

@@ -2,7 +2,7 @@
  * =================================================================================
  * 斗鱼弹幕助手 - 输入框检测器
  * ---------------------------------------------------------------------------------
- * 根据斗鱼页面结构，精确检测和处理不同类型的输入框
+ * 根据斗鱼页面结构，检测和处理不同类型的输入框
  * =================================================================================
  */
 
@@ -275,11 +275,12 @@ export const InputDetector = {
             return INPUT_TYPES.MAIN_CHAT;
         }
         
-        // 全屏浮动输入框（支持哈希值变化）
-        if (element.classList.contains('inputView-2a65aa') || 
-            (element.type === 'text' && element.closest('.fullScreenSendor-e3061e'))) {
-            return INPUT_TYPES.FULLSCREEN_FLOAT;
-        }
+        // 暂时禁用全屏浮动输入框识别
+        // // 全屏浮动输入框（支持哈希值变化）
+        // if (element.classList.contains('inputView-2a65aa') || 
+        //     (element.type === 'text' && element.closest('.fullScreenSendor-e3061e'))) {
+        //     return INPUT_TYPES.FULLSCREEN_FLOAT;
+        // }
         
         return INPUT_TYPES.UNKNOWN;
     },

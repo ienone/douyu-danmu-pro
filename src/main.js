@@ -55,11 +55,11 @@ class DouyuDanmakuAssistant {
             // 初始化输入管理器（会同时初始化UIManager）
             await InputManager.init();
             
+            // 添加测试数据（开发阶段）
+            await this.addTestData();
+            
             this.initialized = true;
             Utils.log('斗鱼弹幕助手初始化完成');
-            
-            // 添加一些测试数据（开发阶段）
-            await this.addTestData();
             
         } catch (error) {
             Utils.log(`初始化失败: ${error.message}`, 'error');
@@ -86,40 +86,30 @@ class DouyuDanmakuAssistant {
                 return; // 已有数据，不添加测试数据
             }
             
-            // 添加一些测试弹幕模板
-            const testTemplates = [
-                '666',
-                '牛逼',
-                '主播加油',
-                '哈哈哈哈',
-                '好看好看',
-                '主播真棒',
-                '期待期待',
-                '支持支持',
-                '感谢分享',
-                '学到了'
-            ];
+            // 自动导入3页API数据作为测试数据
+            Utils.log('数据库为空，开始导入测试数据...');
+            const importResult = await DanmakuDB.testAutoImport(3);
             
-            let successCount = 0;
-            for (const text of testTemplates) {
-                const result = await DanmakuDB.add(text, []);
-                if (result !== null) {
-                    successCount++;
-                    Utils.log(`成功添加测试数据: "${text}" (ID: ${result})`);
-                } else {
-                    Utils.log(`添加测试数据失败: "${text}"`, 'warn');
+            if (importResult && importResult.successCount > 0) {
+                Utils.log(`测试数据导入完成：成功 ${importResult.successCount} 条`);
+            } else {
+                // 如果API导入失败，添加本地测试数据作为备选
+                const testTemplates = [
+                    '666', '牛逼', '主播加油', '哈哈哈哈', '好看好看',
+                    '主播真棒', '期待期待', '支持支持', '感谢分享', '学到了'
+                ];
+                
+                let successCount = 0;
+                for (const text of testTemplates) {
+                    const result = await DanmakuDB.add(text, []);
+                    if (result !== null) successCount++;
                 }
+                
+                Utils.log(`备用测试数据添加完成：成功 ${successCount} 条`);
             }
-            
-            Utils.log(`测试数据添加完成，成功添加 ${successCount}/${testTemplates.length} 条记录`);
-            
-            // 验证数据是否正确添加
-            const finalData = await DanmakuDB.getAll();
-            Utils.log(`验证：数据库中现在有 ${finalData.length} 条记录`);
             
         } catch (error) {
             Utils.log(`添加测试数据失败: ${error.message}`, 'error');
-            Utils.log(`错误堆栈: ${error.stack}`, 'error');
         }
     }
     
@@ -134,7 +124,6 @@ class DouyuDanmakuAssistant {
         Utils.log('斗鱼弹幕助手已销毁');
     }
 }
-
 // 创建应用程序实例
 const app = new DouyuDanmakuAssistant();
 
@@ -154,3 +143,4 @@ window.addEventListener('beforeunload', () => {
 
 // 导出应用实例（用于调试）
 window.DouyuDanmakuAssistant = app;
+window.DanmakuDB = DanmakuDB;

@@ -107,7 +107,13 @@ export const SettingsManager = {
             enableSync: false,
             triggerKeys: CONFIG.TRIGGER_KEYS,
             navigationKeys: CONFIG.NAVIGATION_KEYS,
-            debounceDelay: CONFIG.DEBOUNCE_DELAY
+            debounceDelay: CONFIG.DEBOUNCE_DELAY,
+            sortBy: 'relevance',
+            autoImport: {
+                maxPages: 5,
+                pageSize: 50,
+                sortByPopularity: true
+            }
         };
     },
     
