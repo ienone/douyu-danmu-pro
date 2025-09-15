@@ -15,7 +15,7 @@ import { Index } from 'flexsearch';
 /**
  * 弹幕数据库管理器
  */
-export const DanmakuDB = {
+export const DanmukuDB = {
     
     // 数据库实例
     db: null,
@@ -129,7 +129,7 @@ export const DanmakuDB = {
         }
         
         try {
-            const danmakuData = {
+            const danmukuData = {
                 text: text.trim(),
                 tags: tags.filter(tag => tag.trim()),
                 syncState: 'pending', // 待同步状态
@@ -140,12 +140,12 @@ export const DanmakuDB = {
             
             const transaction = this.db.transaction([CONFIG.DB_STORE_NAME], 'readwrite');
             const store = transaction.objectStore(CONFIG.DB_STORE_NAME);
-            const request = store.add(danmakuData);
+            const request = store.add(danmukuData);
             
             return new Promise((resolve, reject) => {
                 request.onsuccess = (event) => {
                     const id = event.target.result;
-                    const newData = { ...danmakuData, id };
+                    const newData = { ...danmukuData, id };
                     
                     // 更新内存缓存
                     this.memoryCache.set(id, newData);
@@ -193,20 +193,20 @@ export const DanmakuDB = {
             const searchIds = this.searchIndex.search(query, limit * 2); // 获取更多结果用于排序
 
             // 根据搜索到的ID获取完整数据
-            let matchedDanmaku = searchIds
+            let matchedDanmuku = searchIds
                 .map(id => this.memoryCache.get(id))
                 .filter(item => item);
 
             // 根据排序方式进行排序
             switch (sortBy) {
                 case 'popularity':
-                    matchedDanmaku.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+                    matchedDanmuku.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
                     break;
                 case 'recent':
-                    matchedDanmaku.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    matchedDanmuku.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     break;
                 case 'usage':
-                    matchedDanmaku.sort((a, b) => {
+                    matchedDanmuku.sort((a, b) => {
                         if (b.useCount !== a.useCount) {
                             return (b.useCount || 0) - (a.useCount || 0);
                         }
@@ -214,7 +214,7 @@ export const DanmakuDB = {
                     });
                     break;
                 default: // relevance
-                    matchedDanmaku.sort((a, b) => {
+                    matchedDanmuku.sort((a, b) => {
                         // 综合排序：使用次数 + 人气 + 最近使用
                         const scoreA = (a.useCount || 0) * 0.4 + (a.popularity || 0) * 0.3 + ((a.lastUsed || 0) / 1000000) * 0.3;
                         const scoreB = (b.useCount || 0) * 0.4 + (b.popularity || 0) * 0.3 + ((b.lastUsed || 0) / 1000000) * 0.3;
@@ -224,7 +224,7 @@ export const DanmakuDB = {
             }
 
             // 限制最终结果数量
-            const finalResults = matchedDanmaku.slice(0, limit);
+            const finalResults = matchedDanmuku.slice(0, limit);
 
             Utils.log(`搜索 "${query}" (${sortBy}) 返回 ${finalResults.length} 条结果`);
             return finalResults;
@@ -456,20 +456,49 @@ export const DanmakuDB = {
         }
     },
 
+
     /**
-     * 自动导入弹幕数据
-     * @param {number} maxPages - 最大导入页数
-     * @param {number} pageSize - 每页数据量
-     * @param {boolean} sortByPopularity - 是否按人气排序
+     * 从指定的URL导入弹幕数据
+     * @param {string} url - 包含弹幕数据的JSON文件的URL
+     * @returns {Promise<Object|null>} 导入结果统计或null
+     */
+    async importFromUrl(url) {
+        Utils.log(`开始从 URL 下载弹幕数据: ${url}`);
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
+            }
+
+            const jsonData = await response.json();
+            Utils.log(`数据下载成功，共 ${jsonData.length} 条。开始导入数据库...`);
+
+            // 调用现有的 importFromJson 函数处理数据
+            return await this.importFromJson(jsonData);
+
+        } catch (error) {
+            Utils.log(`从 URL 导入数据失败: ${error.message}`, 'error');
+            return null;
+        }
+    },
+
+
+    /**
+     * 从JSON数据导入弹幕
+     * @param {Array} jsonData - 弹幕数据数组
      * @returns {Promise<Object>} 导入结果统计
      */
-    async autoImportData(maxPages = 5, pageSize = 50, sortByPopularity = true) {
+    async importFromJson(jsonData) {
         const startTime = Date.now();
         const importLog = {
             timestamp: startTime,
-            maxPages,
-            pageSize,
-            sortByPopularity,
+            source: 'json_data',
             status: 'running',
             totalProcessed: 0,
             successCount: 0,
@@ -477,130 +506,104 @@ export const DanmakuDB = {
             duplicateCount: 0,
             errors: []
         };
-        
+
         try {
-            // 首先初始化标签字典
-            await this.initTagDictionary();
             const tagDict = await this.getTagDictionary();
             const tagMap = new Map(tagDict.map(tag => [tag.dictValue, tag.dictLabel]));
-            
-            Utils.log(`开始自动导入弹幕数据：最大${maxPages}页，每页${pageSize}条`);
-            
-            // 获取现有数据以避免重复
+
             const existingData = await this.getAll();
             const existingTexts = new Set(existingData.map(item => item.text));
             
-            for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+            importLog.totalProcessed = jsonData.length;
+
+            for (const item of jsonData) {
                 try {
-                    const url = sortByPopularity 
-                        ? `https://hguofichp.cn:10086/machine/sortAllBarrage?pageNum=${pageNum}&pageSize=${pageSize}&tags=`
-                        : `https://hguofichp.cn:10086/machine/Page?pageNum=${pageNum}&pageSize=${pageSize}`;
-                    
-                    const response = await fetch(url);
-                    const result = await response.json();
-                    
-                    if (result.code !== 200 || !result.data?.list) {
-                        importLog.errors.push(`第${pageNum}页数据获取失败: ${result.msg || '未知错误'}`);
+                    if (existingTexts.has(item.barrage)) {
+                        importLog.duplicateCount++;
                         continue;
                     }
+
+                    const tagValues = item.tags ? String(item.tags).split(',').map(t => t.trim()) : [];
+                    const tagLabels = tagValues.map(value => tagMap.get(value) || value).filter(Boolean);
+
+                    const danmakuData = {
+                        text: item.barrage.trim(),
+                        tags: tagLabels,
+                        originalId: item.id,
+                        popularity: parseInt(item.cnt) || 0,
+                        category: 'imported',
+                        syncState: 'synced',
+                        createdAt: new Date(item.submitTime).getTime(),
+                        lastUsed: 0,
+                        useCount: 0,
+                        source: 'json_import',
+                        importBatch: startTime
+                    };
+
+                    const transaction = this.db.transaction([CONFIG.DB_STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(CONFIG.DB_STORE_NAME);
                     
-                    const danmakuList = result.data.list;
-                    Utils.log(`正在处理第${pageNum}页，共${danmakuList.length}条弹幕`);
-                    
-                    for (const item of danmakuList) {
-                        importLog.totalProcessed++;
-                        
-                        try {
-                            // 检查是否重复
-                            if (existingTexts.has(item.barrage)) {
-                                importLog.duplicateCount++;
-                                continue;
-                            }
-                            
-                            // 解析标签
-                            const tagValues = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
-                            const tagLabels = tagValues.map(value => tagMap.get(value) || value);
-                            
-                            // 构建弹幕数据
-                            const danmakuData = {
-                                text: item.barrage.trim(),
-                                tags: tagLabels,
-                                originalId: item.id,
-                                popularity: parseInt(item.cnt) || 0,
-                                category: 'imported',
-                                syncState: 'synced',
-                                createdAt: new Date(item.submitTime).getTime(),
-                                lastUsed: 0,
-                                useCount: 0,
-                                source: 'auto_import',
-                                importBatch: startTime
-                            };
-                            
-                            // 添加到数据库
-                            const transaction = this.db.transaction([CONFIG.DB_STORE_NAME], 'readwrite');
-                            const store = transaction.objectStore(CONFIG.DB_STORE_NAME);
-                            
-                            await new Promise((resolve, reject) => {
-                                const addRequest = store.add(danmakuData);
-                                addRequest.onsuccess = (event) => {
-                                    const id = event.target.result;
-                                    danmakuData.id = id;
-                                    
-                                    // 更新内存缓存
-                                    if (this.memoryCache) {
-                                        this.memoryCache.set(id, danmakuData);
-                                    }
-                                    
-                                    // 更新搜索索引
-                                    if (this.searchIndex) {
-                                        const searchContent = [danmakuData.text, ...danmakuData.tags].join(' ');
-                                        this.searchIndex.add(id, searchContent);
-                                    }
-                                    
-                                    resolve();
-                                };
-                                addRequest.onerror = () => reject(new Error('数据库添加失败'));
-                            });
-                            
-                            existingTexts.add(item.barrage);
-                            importLog.successCount++;
-                            
-                        } catch (error) {
-                            importLog.failCount++;
-                            importLog.errors.push(`处理弹幕失败 (ID: ${item.id}): ${error.message}`);
-                        }
-                    }
-                    
-                    // 每页完成后的进度报告
-                    Utils.log(`第${pageNum}页处理完成 - 成功: ${importLog.successCount}, 失败: ${importLog.failCount}, 重复: ${importLog.duplicateCount}`);
-                    
-                    // 避免请求过于频繁
-                    if (pageNum < maxPages) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                    
+                    await new Promise((resolve, reject) => {
+                        const addRequest = store.add(danmakuData);
+                        addRequest.onsuccess = () => resolve();
+                        addRequest.onerror = (e) => reject(new Error(`数据库添加失败: ${e.target.error}`));
+                    });
+
+                    existingTexts.add(item.barrage);
+                    importLog.successCount++;
+
                 } catch (error) {
-                    importLog.errors.push(`第${pageNum}页处理异常: ${error.message}`);
-                    Utils.log(`第${pageNum}页处理异常: ${error.message}`, 'error');
+                    importLog.failCount++;
+                    importLog.errors.push(`处理弹幕 (ID: ${item.id}) 失败: ${error.message}`);
                 }
             }
-            
-            // 完成导入
+
             importLog.status = 'completed';
             importLog.duration = Date.now() - startTime;
-            
-            // 保存导入日志
             await this._saveImportLog(importLog);
-            
-            // 重建索引
-            await this._buildMemoryIndex();
-            
-            Utils.log(`弹幕数据导入完成！`);
-            Utils.log(`统计信息：总处理 ${importLog.totalProcessed} 条，成功 ${importLog.successCount} 条，失败 ${importLog.failCount} 条，重复 ${importLog.duplicateCount} 条`);
-            Utils.log(`耗时：${(importLog.duration / 1000).toFixed(2)} 秒`);
+            await this._buildMemoryIndex(); // 导入后重建索引
+
+            Utils.log(`JSON数据导入完成！成功 ${importLog.successCount}, 失败 ${importLog.failCount}, 重复 ${importLog.duplicateCount}`);
             
             return importLog;
-            
+
+        } catch (error) {
+            importLog.status = 'failed';
+            importLog.duration = Date.now() - startTime;
+            importLog.errors.push(`导入过程异常: ${error.message}`);
+            await this._saveImportLog(importLog);
+            Utils.log(`从JSON导入数据失败: ${error.message}`, 'error');
+            return importLog;
+        }
+    },
+
+    /**
+     * 自动导入弹幕数据
+     * @returns {Promise<Object>} 导入结果统计
+     */
+    async autoImportData() {
+        const startTime = Date.now();
+        const importLog = {
+            timestamp: startTime,
+            source: 'url_import',
+            status: 'running',
+            errors: []
+        };
+
+        try {
+            // 首先初始化标签字典
+            await this.initTagDictionary();
+
+            const dataUrl = 'https://data.ienone.top/danmuku/danmuku_v0.json';
+            const result = await this.importFromUrl(dataUrl);
+
+            if (result) {
+                Utils.log(`弹幕数据导入完成！`);
+                return result;
+            } else {
+                throw new Error('从URL导入返回了null');
+            }
+
         } catch (error) {
             importLog.status = 'failed';
             importLog.duration = Date.now() - startTime;
@@ -689,11 +692,11 @@ export const DanmakuDB = {
             
             // 创建 FlexSearch 索引配置
             this.searchIndex = new Index({
-                tokenize: 'full',
-                resolution: 9,
-                depth: 3,
-                encode: false,
-                cache: true
+                tokenize: 'forward',
+                resolution: 9, // resolution 1-9, 数值越大索引越精细
+                depth: 3, // depth 1-5, 控制索引的层级深度
+                encode: false, // 关闭编码以支持中文
+                cache: true // 启用缓存以提升性能
             });
             
             // 添加所有数据到索引
@@ -712,13 +715,12 @@ export const DanmakuDB = {
 
     /**
      * 测试用自动导入功能
-     * @param {number} maxPages - 最大导入页数 (默认3页，用于测试)
      * @returns {Promise<Object>} 导入结果统计
      */
-    async testAutoImport(maxPages = 3) {
-        Utils.log(`=== 开始测试自动导入功能，导入 ${maxPages} 页数据 ===`);
+    async testAutoImport() {
+        Utils.log(`=== 开始测试自动导入功能 ===`);
         
-        const result = await this.autoImportData(maxPages, 50, true);
+        const result = await this.autoImportData();
         
         // 详细的测试报告
         Utils.log('=== 导入测试完成，结果统计 ===');

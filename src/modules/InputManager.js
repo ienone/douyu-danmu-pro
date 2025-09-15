@@ -8,7 +8,7 @@
 
 import { CONFIG } from '../utils/CONFIG.js';
 import { Utils } from '../utils/utils.js';
-import { DanmakuDB } from './DanmakuDB.js';
+import { DanmukuDB } from './DanmukuDB.js';
 import { UIManager } from './UIManager.js';
 import { InputDetector, INPUT_TYPES } from './InputDetector.js';
 import { NativeSetter } from '../utils/nativeSetter.js';
@@ -433,7 +433,7 @@ export const InputManager = {
         if (typeof candidate.updateUsage === "function") {
             candidate.updateUsage();
         } else if (candidate.id) {
-            DanmakuDB.updateUsage(candidate.id);
+            DanmukuDB.updateUsage(candidate.id);
         }
         
         // 填入输入框
@@ -472,16 +472,7 @@ export const InputManager = {
         }
         
         // 从数据库搜索匹配的弹幕模板
-        let suggestions = await DanmakuDB.search(inputValue);
-        
-        // 如果数据库中没有数据，使用模拟数据进行测试
-        if (suggestions.length === 0) {
-            suggestions = [
-                { id: 1, text: '测试候选项1', tags: ['test'], useCount: 1, lastUsed: Date.now(), getDisplayText: function() { return this.text; } },
-                { id: 2, text: '测试候选项2', tags: ['test'], useCount: 2, lastUsed: Date.now(), getDisplayText: function() { return this.text; } },
-                { id: 3, text: '测试候选项3', tags: ['test'], useCount: 3, lastUsed: Date.now(), getDisplayText: function() { return this.text; } }
-            ];
-        }
+        let suggestions = await DanmukuDB.search(inputValue);
         
         this.currentSuggestions = suggestions;
         

@@ -15,7 +15,7 @@ export default defineConfig({
                     '*://www.douyu.com/*',
                 ],
                 connect: [
-                    'api.example.com',  // TODO: 替换为实际的后端API域名
+                    'data.ienone.top',  // 弹幕数据源域名
                     'localhost:*'       // 开发环境
                 ],
                 'run-at': 'document-start',

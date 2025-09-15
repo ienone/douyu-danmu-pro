@@ -2,7 +2,7 @@
 // SettingsPanel.js
 
 import React from 'react';
-import { SettingsManager, DanmakuDB } from 'your-import-paths';
+import { SettingsManager, DanmukuDB } from 'your-import-paths';
 
 class SettingsPanel extends React.Component {
     constructor(props) {
@@ -24,7 +24,7 @@ class SettingsPanel extends React.Component {
         try {
             this.showImportProgress();
             
-            const result = await DanmakuDB.autoImportData(
+            const result = await DanmukuDB.autoImportData(
                 settings.autoImportMaxPages || 5,
                 settings.autoImportPageSize || 50,
                 settings.autoImportSortByPopularity !== false
@@ -37,7 +37,7 @@ class SettingsPanel extends React.Component {
     }
 
     async handleShowImportLogs() {
-        const logs = await DanmakuDB.getImportLogs(10);
+        const logs = await DanmukuDB.getImportLogs(10);
         this.showImportLogModal(logs);
     }
 

@@ -10,9 +10,9 @@ export const CONFIG = {
     SCRIPT_PREFIX: '[斗鱼弹幕助手]',
     
     // 数据库配置
-    DB_NAME: 'DouyuDanmakuAssistant',
+    DB_NAME: 'DouyuDanmukuAssistant',
     DB_VERSION: 2,
-    DB_STORE_NAME: 'danmaku_templates',
+    DB_STORE_NAME: 'danmuku_templates',
     
     // 设置存储前缀
     SETTINGS_KEY_PREFIX: 'dda_',

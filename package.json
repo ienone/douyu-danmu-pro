@@ -1,12 +1,12 @@
 {
-  "name": "douyu-danmaku-assistant",
+  "name": "douyu-danmuku-assistant",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "description": "斗鱼弹幕助手 - 畅快刷弹幕",
   "keywords": [
     "douyu",
-    "danmaku",
+    "danmuku",
     "assistant",
     "userscript",
     "tampermonkey"

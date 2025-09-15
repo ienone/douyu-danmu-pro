@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { DanmakuDB } from './modules/DanmakuDB.js';
+import { DanmukuDB } from './modules/DanmukuDB.js';
 import { Utils } from './utils/utils.js';
 
 /**
@@ -22,25 +22,25 @@ async function testDataImport(pages = 3) {
         
         // 1. 初始化数据库
         Utils.log('1. 初始化数据库...');
-        const initResult = await DanmakuDB.init();
+        const initResult = await DanmukuDB.init();
         if (!initResult) {
             throw new Error('数据库初始化失败');
         }
         
         // 2. 获取导入前的数据统计
         Utils.log('2. 获取导入前数据统计...');
-        const beforeStats = await DanmakuDB.getStatistics();
+        const beforeStats = await DanmukuDB.getStatistics();
         
         // 3. 执行测试导入 (使用API数据)
         Utils.log(`3. 开始从API导入 ${pages} 页数据...`);
         Utils.log(`   - 每页 50 条弹幕`);
         Utils.log(`   - 按人气排序获取最热门弹幕`);
         Utils.log(`   - 自动获取并解析标签`);
-        const importResult = await DanmakuDB.testAutoImport(pages);
+        const importResult = await DanmukuDB.testAutoImport(pages);
         
         // 4. 获取导入后的数据统计
         Utils.log('4. 获取导入后数据统计...');
-        const afterStats = await DanmakuDB.getStatistics();
+        const afterStats = await DanmukuDB.getStatistics();
         
         // 5. 测试搜索功能
         Utils.log('5. 测试搜索功能...');
@@ -60,7 +60,7 @@ async function testDataImport(pages = 3) {
         Utils.log(`净增加: ${afterStats.total - beforeStats.total} 条`);
         
         // 7. 获取导入日志
-        const logs = await DanmakuDB.getImportLogs(3);
+        const logs = await DanmukuDB.getImportLogs(3);
         Utils.log(`最近导入记录: ${logs.length} 条`);
         
         return importResult;
@@ -80,7 +80,7 @@ async function testSearchFunctionality() {
     
     for (const query of testQueries) {
         for (const sortBy of sortMethods) {
-            const results = await DanmakuDB.search(query, 5, sortBy);
+            const results = await DanmukuDB.search(query, 5, sortBy);
             Utils.log(`搜索 "${query}" (${sortBy}): 找到 ${results.length} 条结果`);
         }
     }
@@ -92,12 +92,12 @@ async function testSearchFunctionality() {
 async function testClearDatabase() {
     Utils.log('=== 清空数据库测试 ===');
     
-    const beforeCount = await DanmakuDB.getDataCount();
+    const beforeCount = await DanmukuDB.getDataCount();
     Utils.log(`清空前数据量: ${beforeCount}`);
     
-    const clearResult = await DanmakuDB.clear();
+    const clearResult = await DanmukuDB.clear();
     if (clearResult) {
-        const afterCount = await DanmakuDB.getDataCount();
+        const afterCount = await DanmukuDB.getDataCount();
         Utils.log(`清空后数据量: ${afterCount}`);
         Utils.log('数据库清空测试完成');
     } else {
@@ -131,7 +131,7 @@ export {
 // 如果直接运行此脚本
 if (typeof window !== 'undefined') {
     // 浏览器环境 - 挂载到全局对象
-    window.DanmakuTestUtils = {
+    window.DanmukuTestUtils = {
         testDataImport,
         testSearchFunctionality,
         testClearDatabase,
@@ -139,8 +139,8 @@ if (typeof window !== 'undefined') {
     };
     
     Utils.log('测试工具已加载，可以使用以下命令:');
-    Utils.log('- DanmakuTestUtils.testDataImport(5) // 测试导入5页数据');
-    Utils.log('- DanmakuTestUtils.testSearchFunctionality() // 测试搜索功能');
-    Utils.log('- DanmakuTestUtils.testClearDatabase() // 清空数据库');
-    Utils.log('- DanmakuTestUtils.batchTest() // 批量测试');
+    Utils.log('- DanmukuTestUtils.testDataImport(5) // 测试导入5页数据');
+    Utils.log('- DanmukuTestUtils.testSearchFunctionality() // 测试搜索功能');
+    Utils.log('- DanmukuTestUtils.testClearDatabase() // 清空数据库');
+    Utils.log('- DanmukuTestUtils.batchTest() // 批量测试');
 }
