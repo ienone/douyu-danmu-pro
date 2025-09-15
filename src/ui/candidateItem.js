@@ -83,13 +83,27 @@ export const CandidateItem = {
      * @param {number} index - 候选项索引
      */
     bindItemHover(itemEl, index) {
+        let previewTimer = null;
+        
         itemEl.addEventListener('mouseenter', () => {
             // 触发鼠标悬停高亮事件
             this._emitHoverEvent(index);
+            
+            // 延迟显示悬浮预览
+            previewTimer = setTimeout(() => {
+                this._showPreview(itemEl);
+            }, CONFIG.DEFAULT_SETTINGS?.capsule?.preview?.showDelay || 500);
         });
         
         itemEl.addEventListener('mouseleave', () => {
-            // 可选：处理鼠标离开逻辑
+            // 清除预览定时器
+            if (previewTimer) {
+                clearTimeout(previewTimer);
+                previewTimer = null;
+            }
+            
+            // 隐藏悬浮预览
+            this._hidePreview();
         });
     },
     
@@ -101,9 +115,6 @@ export const CandidateItem = {
     updateActiveState(itemEl, isActive) {
         if (isActive) {
             itemEl.classList.add(CONFIG.CSS_CLASSES.POPUP_ITEM_ACTIVE);
-            
-            // 滚动到可见区域
-            this._scrollItemIntoView(itemEl);
         } else {
             itemEl.classList.remove(CONFIG.CSS_CLASSES.POPUP_ITEM_ACTIVE);
         }
@@ -120,28 +131,6 @@ export const CandidateItem = {
         items.forEach((item, index) => {
             this.updateActiveState(item, index === activeIndex);
         });
-    },
-    
-    /**
-     * 滚动候选项到可见区域
-     * @param {HTMLElement} itemEl - 候选项DOM元素
-     * @private
-     */
-    _scrollItemIntoView(itemEl) {
-        const container = itemEl.closest(`.${CONFIG.CSS_CLASSES.POPUP_CONTENT}`);
-        if (!container) return;
-        
-        const containerRect = container.getBoundingClientRect();
-        const itemRect = itemEl.getBoundingClientRect();
-        
-        // 检查是否需要滚动
-        if (itemRect.top < containerRect.top) {
-            // 项目在容器上方，向上滚动
-            container.scrollTop += itemRect.top - containerRect.top;
-        } else if (itemRect.bottom > containerRect.bottom) {
-            // 项目在容器下方，向下滚动
-            container.scrollTop += itemRect.bottom - containerRect.bottom;
-        }
     },
     
     /**
@@ -168,6 +157,64 @@ export const CandidateItem = {
             detail: { index }
         });
         document.dispatchEvent(event);
+    },
+    
+    /**
+     * 显示悬浮预览
+     * @param {HTMLElement} itemEl - 候选项DOM元素
+     * @private
+     */
+    _showPreview(itemEl) {
+        // 实现悬浮预览显示逻辑
+        const previewElement = document.createElement('div');
+        previewElement.className = CONFIG.CSS_CLASSES.PREVIEW_POPUP;
+        previewElement.textContent = itemEl.textContent; // 示例：显示相同内容
+        
+        document.body.appendChild(previewElement);
+        
+        // 计算并设置预览位置 - 优先显示在上方
+        const itemRect = itemEl.getBoundingClientRect();
+        const previewWidth = 200;
+        const previewHeight = 100;
+        const verticalOffset = CONFIG.DEFAULT_SETTINGS?.capsule?.preview?.verticalOffset || 8;
+        
+        let left = itemRect.left + window.scrollX;
+        let top = itemRect.top + window.scrollY - previewHeight - verticalOffset; // 默认显示在上方
+        
+        // 边界检测
+        const rightEdge = left + previewWidth;
+        
+        if (rightEdge > window.innerWidth) {
+            left = window.innerWidth - previewWidth - 10;
+        }
+        
+        // 如果上方空间不足，显示在下方
+        if (top < window.scrollY) {
+            top = itemRect.bottom + window.scrollY + verticalOffset;
+        }
+        
+        previewElement.style.left = `${left}px`;
+        previewElement.style.top = `${top}px`;
+        
+        // 可选：添加动画效果
+        previewElement.classList.add('fade-in');
+    },
+    
+    /**
+     * 隐藏悬浮预览
+     * @private
+     */
+    _hidePreview() {
+        const previewElement = document.querySelector(`.${CONFIG.CSS_CLASSES.PREVIEW_POPUP}`);
+        if (previewElement) {
+            // 可选：添加动画效果
+            previewElement.classList.add('fade-out');
+            
+            // 动画结束后移除元素
+            previewElement.addEventListener('animationend', () => {
+                previewElement.remove();
+            }, { once: true });
+        }
     },
     
     /**

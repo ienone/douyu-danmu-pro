@@ -6,7 +6,7 @@
 /* 候选项显示时的聊天布局调整 - 优化版本 */
 .layout-Player-chat.ddp-candidates-visible .ChatToolBar {
     transform: translateY(calc(-1 * var(--ddp-candidate-height, 48px)));
-    transition: transform 0.3s ease;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 候选项胶囊列表的基础样式 */

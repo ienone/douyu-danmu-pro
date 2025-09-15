@@ -203,6 +203,10 @@ export const CandidatePanel = {
      * @private
      */
     _renderEmptyState() {
+        // 清空内容容器
+        this.contentElement.innerHTML = '';
+        
+        // 添加空状态类到面板
         this.panelElement.classList.add(CONFIG.CSS_CLASSES.POPUP_EMPTY);
         
         const emptyElement = document.createElement('div');
@@ -210,6 +214,9 @@ export const CandidatePanel = {
         emptyElement.textContent = '暂无匹配的弹幕模板';
         
         this.contentElement.appendChild(emptyElement);
+        
+        // 确保面板高度适配空状态
+        this.contentElement.style.maxHeight = '60px';
     },
     
     /**

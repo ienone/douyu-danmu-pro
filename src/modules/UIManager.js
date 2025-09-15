@@ -11,6 +11,8 @@ import { Utils } from '../utils/utils.js';
 import { CandidatePanel } from '../ui/candidatePanel.js';
 import { InputInteraction } from '../ui/inputInteraction.js';
 import { CandidatePanelState } from '../ui/candidatePanelState.js';
+import { CapsulePreview } from '../ui/capsulePreview.js';
+import { SelectionMode } from '../ui/candidateType.js';
 
 /**
  * UI管理器
@@ -44,12 +46,10 @@ export const UIManager = {
         }
         
         try {
-            // 加载胶囊候选项样式
-            // this.loadCapsuleStyles();
-            
             // 初始化各个组件
             CandidatePanel.init();
             InputInteraction.init();
+            CapsulePreview.init(); // 初始化悬浮框预览
             
             // 绑定组件间的事件通信
             this.bindComponentEvents();
@@ -186,23 +186,13 @@ export const UIManager = {
             
             const text = suggestion.getDisplayText ? suggestion.getDisplayText() : suggestion.text;
             
-            // 根据配置的显示模式应用不同的样式和结构
-            const displayMode = DEFAULT_SETTINGS?.capsule?.displayMode || 'expand';
+            // 简化胶囊内容 - 统一处理，不再区分显示模式
+            capsule.textContent = text;
+            // 移除原生 title 设置，避免双重预览
+            // capsule.title = text; // 注释掉这行
             
-            if (displayMode === 'scroll') {
-                // 文字滚动模式
-                capsule.classList.add('text-scroll-mode');
-                const textSpan = document.createElement('span');
-                textSpan.className = 'capsule-text';
-                textSpan.textContent = text;
-                capsule.appendChild(textSpan);
-            } else {
-                // 胶囊扩充模式（默认）
-                capsule.classList.add('dynamic-expand-mode');
-                capsule.textContent = text;
-            }
-            
-            capsule.title = text; // 添加tooltip显示完整文本
+            // 添加悬浮框预览事件
+            this.bindCapsulePreviewEvents(capsule, suggestion, text);
             
             // 添加点击事件
             capsule.addEventListener('click', () => {
@@ -244,6 +234,10 @@ export const UIManager = {
         console.trace('hidePopup调用追踪');
         
         Utils.log(`隐藏弹窗，当前状态: ${this.currentState}`);
+        
+        // 隐藏悬浮框预览 - 强制隐藏所有类型的预览
+        CapsulePreview.hidePreview(0, 'keyboard');
+        CapsulePreview.hidePreview(0, 'mouse');
         
         CandidatePanel.hidePanel();
         
@@ -429,11 +423,15 @@ export const UIManager = {
         const candidateList = document.querySelector('.ddp-candidate-capsules');
         if (!candidateList) return;
         
+        Utils.log(`=== 更新胶囊样式 ===`);
+        Utils.log(`从索引 ${oldIndex} 切换到索引 ${newIndex}`);
+        
         // 重置旧的活跃项
         if (oldIndex >= 0) {
             const oldCapsule = candidateList.querySelector(`[data-index="${oldIndex}"]`);
             if (oldCapsule) {
                 oldCapsule.classList.remove('active');
+                Utils.log(`已移除旧胶囊 ${oldIndex} 的活跃状态`);
             }
         }
         
@@ -441,19 +439,43 @@ export const UIManager = {
         const newCapsule = candidateList.querySelector(`[data-index="${newIndex}"]`);
         if (newCapsule) {
             newCapsule.classList.add('active');
+            Utils.log(`已设置新胶囊 ${newIndex} 为活跃状态`);
             
-            // 在单行模式下智能滚动到可见区域
+            // 先处理滚动，确保胶囊可见，然后再显示预览框
             if (!candidateList.classList.contains('multi-row')) {
                 this.scrollCapsuleIntoView(candidateList, newCapsule);
+                
+                // 根据是否为循环导航调整等待时间
+                const capsuleIndex = parseInt(newCapsule.dataset.index) || 0;
+                const isCircularNavigation = (capsuleIndex === 0 && candidateList.scrollLeft > candidateList.offsetWidth) || 
+                                           (capsuleIndex === this.currentSuggestions.length - 1 && candidateList.scrollLeft === 0);
+                const delay = isCircularNavigation ? 50 : 150; // 循环导航用更短的延迟
+                
+                Utils.log(`等待滚动完成，延迟: ${delay}ms (循环导航: ${isCircularNavigation})`);
+                
+                // 等待滚动完成后再显示预览框
+                setTimeout(() => {
+                    this.showPreviewForCapsule(newCapsule, newIndex);
+                }, delay);
             } else {
-                // 多行模式使用默认滚动
                 newCapsule.scrollIntoView({ 
                     behavior: 'smooth', 
                     block: 'nearest', 
                     inline: 'center' 
                 });
+                
+                // 等待滚动完成后再显示预览框
+                setTimeout(() => {
+                    this.showPreviewForCapsule(newCapsule, newIndex);
+                }, 150);
             }
+        } else {
+            // 如果没有找到新的胶囊，隐藏预览
+            Utils.log(`未找到索引为 ${newIndex} 的胶囊元素，隐藏预览框`);
+            CapsulePreview.hidePreview(0, 'keyboard');
         }
+        
+        Utils.log(`=== 胶囊样式更新完成 ===`);
     },
     
     /**
@@ -462,31 +484,117 @@ export const UIManager = {
      * @param {HTMLElement} capsule - 要滚动到的胶囊元素
      */
     scrollCapsuleIntoView(candidateList, capsule) {
-        const listRect = candidateList.getBoundingClientRect();
-        const capsuleRect = capsule.getBoundingClientRect();
-        const scrollLeft = candidateList.scrollLeft;
-        
-        // 计算胶囊相对于容器的位置
-        const capsuleRelativeLeft = capsule.offsetLeft;
-        const capsuleWidth = capsule.offsetWidth;
-        const listWidth = candidateList.offsetWidth;
-        
-        // 如果胶囊在右侧不可见区域
-        if (capsuleRelativeLeft + capsuleWidth > scrollLeft + listWidth) {
-            candidateList.scrollTo({
-                left: capsuleRelativeLeft + capsuleWidth - listWidth + 20, // 留20px边距
-                behavior: 'smooth'
-            });
+        if (!candidateList || !capsule) {
+            Utils.log('scrollCapsuleIntoView: 缺少必要元素');
+            return;
         }
-        // 如果胶囊在左侧不可见区域
-        else if (capsuleRelativeLeft < scrollLeft) {
-            candidateList.scrollTo({
-                left: Math.max(0, capsuleRelativeLeft - 20), // 留20px边距，不小于0
-                behavior: 'smooth'
-            });
+        
+        try {
+            const listRect = candidateList.getBoundingClientRect();
+            const capsuleRect = capsule.getBoundingClientRect();
+            const scrollLeft = candidateList.scrollLeft;
+            
+            // 计算胶囊相对于容器的位置
+            const capsuleRelativeLeft = capsule.offsetLeft;
+            const capsuleWidth = capsule.offsetWidth;
+            const listWidth = candidateList.offsetWidth;
+            const capsuleIndex = parseInt(capsule.dataset.index) || 0;
+            
+            Utils.log(`滚动检查: 胶囊索引=${capsuleIndex}, 位置=${capsuleRelativeLeft}px, 宽度=${capsuleWidth}px, 容器宽度=${listWidth}px, 当前滚动=${scrollLeft}px`);
+            
+            // 检查是否为循环导航（从最后回到第一个，或从第一个到最后）
+            const isCircularNavigation = (capsuleIndex === 0 && scrollLeft > listWidth) || 
+                                       (capsuleIndex === this.currentSuggestions.length - 1 && scrollLeft === 0);
+                                       
+            // 确定滚动行为：循环导航时使用瞬间跳转，避免错位
+            const scrollBehavior = isCircularNavigation ? 'instant' : 'smooth';
+            
+            Utils.log(`循环导航检测: ${isCircularNavigation}, 滚动行为: ${scrollBehavior}`);
+            
+            // 如果胶囊在右侧不可见区域
+            if (capsuleRelativeLeft + capsuleWidth > scrollLeft + listWidth) {
+                const newScrollLeft = capsuleRelativeLeft + capsuleWidth - listWidth + 20;
+                Utils.log(`向右滚动到: ${newScrollLeft}px`);
+                candidateList.scrollTo({
+                    left: newScrollLeft,
+                    behavior: scrollBehavior
+                });
+            }
+            // 如果胶囊在左侧不可见区域
+            else if (capsuleRelativeLeft < scrollLeft) {
+                const newScrollLeft = Math.max(0, capsuleRelativeLeft - 20);
+                Utils.log(`向左滚动到: ${newScrollLeft}px`);
+                candidateList.scrollTo({
+                    left: newScrollLeft,
+                    behavior: scrollBehavior
+                });
+            } else {
+                Utils.log('胶囊已在可见区域，无需滚动');
+            }
+        } catch (error) {
+            Utils.log(`滚动出错: ${error.message}`, 'error');
+            console.error('scrollCapsuleIntoView error:', error);
         }
     },
     
+    /**
+     * 为胶囊绑定悬浮框预览事件
+     * @param {HTMLElement} capsule - 胶囊元素
+     * @param {Object} suggestion - 候选项数据
+     * @param {string} text - 显示文本
+     */
+    bindCapsulePreviewEvents(capsule, suggestion, text) {
+        // 彻底移除原生 title 属性，避免双重预览
+        capsule.removeAttribute('title');
+        
+        // 确保不会再被意外设置
+        Object.defineProperty(capsule, 'title', {
+            set: function() {
+                // 忽略任何设置 title 的尝试
+                Utils.log('阻止设置title属性，避免双重预览');
+            },
+            get: function() {
+                return '';
+            },
+            configurable: true
+        });
+        
+        // 使用悬浮框预览组件
+        CapsulePreview.bindCapsuleEvents(capsule, text);
+    },
+    
+    /**
+     * 为指定胶囊显示预览框（在滚动完成后调用）
+     * @param {HTMLElement} capsule - 胶囊元素
+     * @param {number} index - 胶囊索引
+     */
+    showPreviewForCapsule(capsule, index) {
+        if (!capsule || index < 0 || index >= this.currentSuggestions.length) {
+            Utils.log(`无法为胶囊显示预览: 胶囊=${!!capsule}, 索引=${index}, 总数=${this.currentSuggestions.length}`);
+            return;
+        }
+        
+        // 获取候选项文本
+        const candidate = this.currentSuggestions[index];
+        const text = candidate ? (candidate.getDisplayText ? candidate.getDisplayText() : candidate.text) : capsule.textContent;
+        
+        Utils.log(`胶囊文本: "${text}", 长度: ${text ? text.length : 0}`);
+        
+        // 获取胶囊当前位置（滚动后的位置）
+        const capsuleRect = capsule.getBoundingClientRect();
+        Utils.log(`滚动后胶囊位置: left=${capsuleRect.left}px, top=${capsuleRect.top}px, 可见=${capsuleRect.left >= 0 && capsuleRect.left < window.innerWidth}`);
+        
+        // 键盘导航时显示预览框
+        if (text && text.length > 8) {
+            Utils.log(`键盘选中胶囊，显示预览: ${text.substring(0, 20)}...`);
+            CapsulePreview.showPreview(capsule, text, true, 'keyboard');
+        } else {
+            // 如果文本不符合条件，隐藏预览框
+            Utils.log(`文本过短或不存在，隐藏预览框`);
+            CapsulePreview.hidePreview(0, 'keyboard');
+        }
+    },
+
     /**
      * 导航到上一个候选项
      */
@@ -500,6 +608,11 @@ export const UIManager = {
             // 对于聊天输入框，上键相当于左键
             this.navigateLeft();
         } else {
+            // 确保进入选择模式
+            if (!this.isSelectionModeActive) {
+                this.setSelectionModeActive(true);
+            }
+            
             CandidatePanelState.navigateUp();
             const newIndex = CandidatePanelState.activeIndex;
             this.setActiveIndex(newIndex);
@@ -519,6 +632,11 @@ export const UIManager = {
             // 对于聊天输入框，下键相当于右键
             this.navigateRight();
         } else {
+            // 确保进入选择模式
+            if (!this.isSelectionModeActive) {
+                this.setSelectionModeActive(true);
+            }
+            
             CandidatePanelState.navigateDown();
             const newIndex = CandidatePanelState.activeIndex;
             this.setActiveIndex(newIndex);
@@ -530,6 +648,11 @@ export const UIManager = {
      */
     navigateLeft() {
         if (!this.initialized || this.currentSuggestions.length === 0) return;
+        
+        // 确保进入选择模式
+        if (!this.isSelectionModeActive) {
+            this.setSelectionModeActive(true);
+        }
         
         let newIndex = this.activeIndex - 1;
         if (newIndex < 0) {
@@ -543,6 +666,11 @@ export const UIManager = {
      */
     navigateRight() {
         if (!this.initialized || this.currentSuggestions.length === 0) return;
+        
+        // 确保进入选择模式
+        if (!this.isSelectionModeActive) {
+            this.setSelectionModeActive(true);
+        }
         
         let newIndex = this.activeIndex + 1;
         if (newIndex >= this.currentSuggestions.length) {
@@ -613,6 +741,11 @@ export const UIManager = {
     clearActiveIndex() {
         this.activeIndex = -1;
         
+        // 退出选择模式（这会自动隐藏预览框）
+        if (this.isSelectionModeActive) {
+            this.setSelectionModeActive(false);
+        }
+        
         // 清除所有候选项的活跃样式
         const chatCandidateList = document.querySelector('.ddp-candidate-capsules');
         if (chatCandidateList) {
@@ -639,12 +772,16 @@ export const UIManager = {
         this.isSelectionModeActive = active;
         
         if (active) {
-            // 进入选择模式时，如果没有活跃索引，设置第一个为活跃
+            // 进入选择模式
+            CapsulePreview.enterSelectionMode();
+            
+            // 如果没有活跃索引，设置第一个为活跃
             if (this.activeIndex === -1 && this.currentSuggestions.length > 0) {
                 this.setActiveIndex(0);
             }
         } else {
-            // 退出选择模式时，清除活跃索引
+            // 退出选择模式
+            CapsulePreview.exitSelectionMode();
             this.clearActiveIndex();
         }
         
@@ -761,6 +898,7 @@ export const UIManager = {
         // 销毁组件
         CandidatePanel.destroy();
         InputInteraction.cleanup();
+        CapsulePreview.destroy(); // 销毁悬浮框预览
         
         // 重置状态
         this.initialized = false;
@@ -777,6 +915,31 @@ export const UIManager = {
      * @param {Array} suggestions - 候选项列表
      * @returns {number} 计算出的高度
      */
+    calculateCandidateListHeight(suggestions) {
+        // 基础高度：容器padding + margin
+        const baseHeight = 12; // 上下padding/margin
+        
+        // 单个胶囊高度（包括margin）
+        const capsuleHeight = 32; // 高度 + margin
+        
+        // 计算行数（假设每行最多显示的胶囊数）
+        const maxCapsulesPerRow = Math.floor(window.innerWidth * 0.6 / 120); // 每个胶囊约120px宽
+        const rows = Math.ceil(suggestions.length / maxCapsulesPerRow);
+        
+        const calculatedHeight = baseHeight + (rows * capsuleHeight);
+        
+        Utils.log(`计算候选列表高度:`);
+        Utils.log(`- 建议数量: ${suggestions.length}`);
+        Utils.log(`- 窗口宽度: ${window.innerWidth}px`);
+        Utils.log(`- 每行最大胶囊数: ${maxCapsulesPerRow}`);
+        Utils.log(`- 计算行数: ${rows}`);
+        Utils.log(`- 基础高度: ${baseHeight}px`);
+        Utils.log(`- 胶囊高度: ${capsuleHeight}px`);
+        Utils.log(`- 计算总高度: ${calculatedHeight}px`);
+        
+        return calculatedHeight;
+    },
+
     calculateCandidateListHeight(suggestions) {
         // 基础高度：容器padding + margin
         const baseHeight = 12; // 上下padding/margin

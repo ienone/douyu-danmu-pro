@@ -689,7 +689,7 @@ export const DanmakuDB = {
             
             // 创建 FlexSearch 索引配置
             this.searchIndex = new Index({
-                tokenize: 'forward',
+                tokenize: 'full',
                 resolution: 9,
                 depth: 3,
                 encode: false,

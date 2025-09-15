@@ -45,7 +45,7 @@
     border: 1px solid var(--md-sys-color-outline);
     border-radius: 4px;
     background-color: var(--md-sys-color-surface-container);
-    transition: border-color 0.2s var(--motion-easing);
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
     box-sizing: border-box;
     height: 56px;

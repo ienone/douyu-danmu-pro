@@ -70,6 +70,7 @@ export const CandidatePanelState = {
             
         this.selectionMode = SelectionMode.KEYBOARD;
         this._updateActiveItem();
+        this._emitNavigationEvent('left');
     },
     
     /**
@@ -84,6 +85,7 @@ export const CandidatePanelState = {
             
         this.selectionMode = SelectionMode.KEYBOARD;
         this._updateActiveItem();
+        this._emitNavigationEvent('right');
     },
     
     /**
@@ -91,6 +93,7 @@ export const CandidatePanelState = {
      */
     navigateUp() {
         this.navigateLeft();
+        this._emitNavigationEvent('up');
     },
     
     /**
@@ -98,6 +101,7 @@ export const CandidatePanelState = {
      */
     navigateDown() {
         this.navigateRight();
+        this._emitNavigationEvent('down');
     },
     
     /**
@@ -233,6 +237,19 @@ export const CandidatePanelState = {
             oldState,
             newState,
             panelState: this.getPanelState()
+        });
+    },
+    
+    /**
+     * 触发导航事件
+     * @param {string} direction - 导航方向
+     * @private
+     */
+    _emitNavigationEvent(direction) {
+        this._emit('navigation', {
+            direction,
+            activeIndex: this.activeIndex,
+            candidate: this.candidates[this.activeIndex] || null
         });
     }
 };

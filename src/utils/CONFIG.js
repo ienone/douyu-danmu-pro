@@ -88,7 +88,7 @@ export const DEFAULT_SETTINGS = {
     
     // 胶囊候选项配置
     capsule: {
-        maxWidth: 5000,              // 胶囊最大宽度（像素）
+        maxWidth: 150,              // 胶囊最大宽度（像素）- 统一设置
         height: 24,                 // 胶囊内容高度（像素）
         padding: 16,                // 容器上下内边距总和 (8px * 2)
         margin: 16,                 // 容器外边距总和 (8px * 2)
@@ -96,7 +96,19 @@ export const DEFAULT_SETTINGS = {
         fontSize: 12,               // 胶囊字体大小（像素）
         itemsPerRow: 4,             // 多行模式下每行显示的候选项数量
         singleRowMaxItems: 8,       // 单行模式下最大显示数量
-        displayMode: 'scroll',      // 显示模式：'scroll'(文字滚动) 或 'expand'(胶囊扩充)
+        
+        // 悬浮框预览配置
+        preview: {
+            enabled: true,          // 启用悬浮框预览
+            showDelay: 500,         // 显示延迟（毫秒）
+            hideDelay: 100,         // 隐藏延迟（毫秒）
+            maxWidth: 300,          // 最大宽度（像素）
+            animationDuration: 200, // 动画持续时间（毫秒）
+            keyboardShowDelay: 150, // 键盘导航时的显示延迟（稍微增加避免闪烁）
+            verticalOffset: 8,      // 垂直偏移量（像素）
+            horizontalOffset: 0,    // 水平偏移量（像素）
+            preferredPosition: 'top' // 首选位置：'top' | 'bottom' | 'auto'
+        }
     },
 
     // 功能开关

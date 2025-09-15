@@ -46,14 +46,14 @@
   padding: 8px 16px;
   cursor: pointer;
   border-bottom: 1px solid var(--md-sys-color-outline);
-  transition: all .2s var(--motion-easing);
+  transition: all .25s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   position: relative;
   border-left: 6px solid transparent; 
-  will-change: transform ;
+  will-change: transform;
 }
 
 /* 激活状态下，只改变颜色和 transform，不改变尺寸 */
@@ -72,6 +72,31 @@
 .dda-popup-item:hover{
     background-color: var(--md-sys-color-surface-bright);
     transform: translateX(4px);
+}
+
+/* 悬浮预览框 */
+.dda-preview-tooltip {
+    position: fixed;
+    z-index: 10000;
+    background: var(--md-sys-color-surface-bright);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    word-wrap: break-word;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.dda-preview-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* 弹幕文本 */
@@ -121,24 +146,6 @@
     text-align: center;
     color: var(--md-sys-color-on-surface-variant);
     font-size: 13px;
-}
-
-/* 滚动条样式 */
-.dda-popup-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.dda-popup-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.dda-popup-content::-webkit-scrollbar-thumb {
-    background-color: var(--md-sys-color-outline);
-    border-radius: 3px;
-}
-
-.dda-popup-content::-webkit-scrollbar-thumb:hover {
-    background-color: var(--md-sys-color-on-surface-variant);
 }
 
 /* 响应式设计 */
