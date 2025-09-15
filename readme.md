@@ -3,8 +3,7 @@
 一个为斗鱼直播平台开发的浏览器用户脚本，提供弹幕模板自动补全、快捷键选择等功能，增强用户的弹幕输入体验。
 
 ## 功能演示
-
-![演示视频,日间模式下有点小bug...](https://github.com/user-attachments/assets/3675c18d-6ef1-406d-ab84-3d1ecfb45dd2)
+<https://github.com/user-attachments/assets/3675c18d-6ef1-406d-ab84-3d1ecfb45dd2>
 
 ## 主要功能
 
