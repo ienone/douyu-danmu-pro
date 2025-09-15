@@ -6,9 +6,9 @@ export default defineConfig({
         monkey({
             entry: 'src/main.js',
             userscript: {
-                name: 'ddp',
+                name: '斗鱼弹幕助手',
                 namespace: 'http://tampermonkey.net/',
-                description: '为斗鱼发送弹幕提供便利畅快的输入体验与补全功能',
+                description: '为斗鱼(6657)发送弹幕提供便利畅快的输入体验与补全功能',
                 version: '1.0.0',
                 author: 'ienone',
                 match: [
