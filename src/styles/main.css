@@ -8,13 +8,9 @@
 
 /* 基础样式 */
 @import './_variables.css';
-@import './_base.css';
 
 /* 组件样式 */
 @import './danmuku-popup.css';
 @import './candidate-capsules.css';
 @import './settings-panel.css';
 
-/* 通用样式 */
-@import './_forms.css';
-@import './_tooltip.css';

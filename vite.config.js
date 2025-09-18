@@ -20,6 +20,7 @@ export default defineConfig({
                 ],
                 'run-at': 'document-start',
                 license: 'MIT',
+                noframes: true,
                 grant: [
                     'GM_addStyle',
                     'GM_getValue',
